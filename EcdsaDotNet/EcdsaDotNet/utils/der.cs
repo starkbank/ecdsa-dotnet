@@ -6,24 +6,24 @@ namespace EllipticCurve.Utils {
 
     public static class Der
     {
-        private static string hexAt = "\x00";
-        private static string hexB = "\x02";
-        private static string hexC = "\x03";
-        private static string hexD = "\x04";
-        private static string hexF = "\x06";
-        private static string hex0 = "\x30";
+        private static readonly string hexAt = "\x00";
+        private static readonly string hexB = "\x02";
+        private static readonly string hexC = "\x03";
+        private static readonly string hexD = "\x04";
+        private static readonly string hexF = "\x06";
+        private static readonly string hex0 = "\x30";
 
-        private static int hex31 = 0x1f;
-        private static int hex127 = 0x7f;
-        private static int hex129 = 0xa0;
-        private static int hex160 = 0x80;
-        private static int hex224 = 0xe0;
+        private static readonly int hex31 = 0x1f;
+        private static readonly int hex127 = 0x7f;
+        private static readonly int hex129 = 0xa0;
+        private static readonly int hex160 = 0x80;
+        private static readonly int hex224 = 0xe0;
 
-        private static string bytesHex0 = BinaryAscii.binaryFromHex(hex0);
-        private static string bytesHexB = BinaryAscii.binaryFromHex(hexB);
-        private static string bytesHexC = BinaryAscii.binaryFromHex(hexC);
-        private static string bytesHexD = BinaryAscii.binaryFromHex(hexD);
-        private static string bytesHexF = BinaryAscii.binaryFromHex(hexF);
+        private static readonly string bytesHex0 = BinaryAscii.binaryFromHex(hex0);
+        private static readonly string bytesHexB = BinaryAscii.binaryFromHex(hexB);
+        private static readonly string bytesHexC = BinaryAscii.binaryFromHex(hexC);
+        private static readonly string bytesHexD = BinaryAscii.binaryFromHex(hexD);
+        private static readonly string bytesHexF = BinaryAscii.binaryFromHex(hexF);
 
         public static string encodeSequence(string[] encodedPieces) {
             int totalLengthLen = 0;
@@ -89,7 +89,7 @@ namespace EllipticCurve.Utils {
         }
 
         public static Tuple<string, string> removeSequence(string str) {
-            checkSequenceError(str, bytesHexB, "02");
+            checkSequenceError(str, bytesHex0, "03");
 
             Tuple<int, int> readLengthResult = readLength(str.Substring(1));
             int length = readLengthResult.Item1;
@@ -333,7 +333,7 @@ namespace EllipticCurve.Utils {
         }
 
         private static int extractFirstInt(string str) {
-            return (int)str[0];
+            return str[0];
         }
     }
 }

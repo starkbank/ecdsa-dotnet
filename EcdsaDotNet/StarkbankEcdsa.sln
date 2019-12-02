@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StarkbankEcdsa", "EcdsaDotNet\StarkbankEcdsa.csproj", "{0DB641BA-A2D8-45AF-9F81-FF41487E6B1B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StarkbankEcdsaTest", "EcdsaDotNetTest\StarkbankEcdsaTest.csproj", "{D553F677-D30C-4B33-BF42-CFC8EB25C1E4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StarkbankEcdsaTests", "StarkbankEcdsaTests\StarkbankEcdsaTests.csproj", "{5012AA56-C71B-4001-9BC2-2BAC7127BA8E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,9 +15,9 @@ Global
 		{0DB641BA-A2D8-45AF-9F81-FF41487E6B1B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0DB641BA-A2D8-45AF-9F81-FF41487E6B1B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0DB641BA-A2D8-45AF-9F81-FF41487E6B1B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{D553F677-D30C-4B33-BF42-CFC8EB25C1E4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D553F677-D30C-4B33-BF42-CFC8EB25C1E4}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D553F677-D30C-4B33-BF42-CFC8EB25C1E4}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D553F677-D30C-4B33-BF42-CFC8EB25C1E4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5012AA56-C71B-4001-9BC2-2BAC7127BA8E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5012AA56-C71B-4001-9BC2-2BAC7127BA8E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5012AA56-C71B-4001-9BC2-2BAC7127BA8E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5012AA56-C71B-4001-9BC2-2BAC7127BA8E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

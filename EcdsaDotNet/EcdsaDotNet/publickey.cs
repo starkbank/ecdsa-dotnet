@@ -100,12 +100,23 @@ namespace EllipticCurve {
                 throw new ArgumentException("trailing junk after public key point-string");
             }
 
-            return fromString(pointString.Substring(2), curve);
+            return fromString(pointString.Substring(2), curve.name);
 
         }
 
-        public static PublicKey fromString(string str, CurveFp curve, bool validatePoint=true) {
-            int baseLen = curve.length();
+        public static PublicKey fromString(string str, string curve="secp256k1", bool validatePoint=true) {
+            CurveFp curveObject;
+            if (curve == "secp256k1") {
+                curveObject = Curves.secp256k1;
+            }
+            else if (curve == "p256" | curve == "prime256v1") {
+                curveObject = Curves.prime256v1;
+            }
+            else {
+                throw new ArgumentException("unknown curve " + curve);
+            }
+
+            int baseLen = curveObject.length();
 
             string xs = str.Substring(0, baseLen);
             string ys = str.Substring(baseLen);
@@ -115,18 +126,18 @@ namespace EllipticCurve {
                 Utils.BinaryAscii.numberFromHex(ys)
             );
 
-            if (validatePoint & !curve.contains(p)) {
+            if (validatePoint & !curveObject.contains(p)) {
                 throw new ArgumentException(
                     "point (" +
                     p.x.ToString() +
                     ", " +
                     p.y.ToString() +
                     ") is not valid for curve " +
-                    curve.name
+                    curveObject.name
                 );
             }
 
-            return new PublicKey(p, curve);
+            return new PublicKey(p, curveObject);
 
         }
 
