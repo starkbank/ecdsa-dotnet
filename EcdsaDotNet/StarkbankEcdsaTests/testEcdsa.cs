@@ -19,9 +19,9 @@ namespace StarkbankEcdsaTests {
         public void testVerifyWrongMessage() {
             PrivateKey privateKey = new PrivateKey();
             PublicKey publicKey = privateKey.publicKey();
-            string message = "This is the right message";
+            string message1 = "This is the right message";
             string message2 = "This is the wrong message";
-            Signature signature = Ecdsa.sign(message, privateKey);
+            Signature signature = Ecdsa.sign(message1, privateKey);
 
             Assert.False(Ecdsa.verify(message2, signature, publicKey));
         }

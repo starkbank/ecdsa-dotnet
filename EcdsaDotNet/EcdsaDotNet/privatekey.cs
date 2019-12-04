@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System.Collections.Generic;
+using System.Numerics;
 using System;
 
 
@@ -10,15 +11,7 @@ namespace EllipticCurve
         public BigInteger secret { get; private set; }
 
         public PrivateKey(string curve="secp256k1", BigInteger? secret=null) {
-            curve = curve.ToLower();
-
-            if (curve == "secp256k1") {
-                this.curve = Curves.secp256k1;
-            } else if (curve == "p256" | curve == "prime256v1") {
-                this.curve = Curves.prime256v1;
-            } else {
-                throw new ArgumentException("unknown curve " + curve);
-            }
+            this.curve = Curves.getCurveByName(curve);
 
             if (secret == null) {
                 secret = Utils.Integer.randomBetween(1, this.curve.N - 1);
@@ -35,11 +28,11 @@ namespace EllipticCurve
             return Utils.BinaryAscii.hexFromNumber(secret, curve.length());
         }
 
-        public string toDer() {
+        public byte[] toDer() {
             string encodedPublicKey = publicKey().toString(true);
 
             return Utils.Der.encodeSequence(
-                new string[] {
+                new List<byte[]> {
                     Utils.Der.encodeInteger(1),
                     Utils.Der.encodeOctetString(toString()),
                     Utils.Der.encodeConstructed(0, Utils.Der.encodeOid(curve.oid)),
@@ -62,28 +55,28 @@ namespace EllipticCurve
             return fromDer(Utils.Der.fromPem(split[1]));
         }
 
-        public static PrivateKey fromDer (string str) {
-            Tuple<string, string> removeSequence = Utils.Der.removeSequence(str);
+        public static PrivateKey fromDer (byte[] der) {
+            Tuple<byte[], byte[]> removeSequence = Utils.Der.removeSequence(der);
             if (removeSequence.Item2.Length > 0) {
                 throw new ArgumentException("trailing junk after DER private key: " + Utils.BinaryAscii.hexFromBinary(removeSequence.Item2));
             }
 
-            Tuple<BigInteger, string> removeInteger = Utils.Der.removeInteger(removeSequence.Item1);
+            Tuple<BigInteger, byte[]> removeInteger = Utils.Der.removeInteger(removeSequence.Item1);
             if (removeInteger.Item1 != 1) {
                 throw new ArgumentException("expected '1' at start of DER private key, got " + removeInteger.Item1.ToString());
             }
 
-            Tuple<string, string> removeOctetString = Utils.Der.removeOctetString(removeInteger.Item2);
+            Tuple<string, byte[]> removeOctetString = Utils.Der.removeOctetString(removeInteger.Item2);
             string privateKeyStr = removeOctetString.Item1;
 
-            Tuple<int, string, string> removeConstructed = Utils.Der.removeConstructed(removeOctetString.Item2);
+            Tuple<int, byte[], byte[]> removeConstructed = Utils.Der.removeConstructed(removeOctetString.Item2);
             int tag = removeConstructed.Item1;
-            string curveOidString = removeConstructed.Item2;
+            byte[] curveOidString = removeConstructed.Item2;
             if (tag != 0) {
                 throw new ArgumentException("expected tag 0 in DER private key, got " + tag.ToString());
             }
 
-            Tuple<int[], string> removeObject = Utils.Der.removeObject(curveOidString);
+            Tuple<int[], byte[]> removeObject = Utils.Der.removeObject(curveOidString);
             int[] oidCurve = removeObject.Item1;
             if (removeObject.Item2.Length > 0) {
                 throw new ArgumentException(
@@ -92,7 +85,9 @@ namespace EllipticCurve
                 );
             }
 
-            if (!Curves.curvesByOid.ContainsKey(oidCurve))
+            string stringOid = string.Join(",", oidCurve);
+
+            if (!Curves.curvesByOid.ContainsKey(stringOid))
             {
                 int numCurves = Curves.supportedCurves.Length;
                 string[] supportedCurves = new string[numCurves];
@@ -108,7 +103,7 @@ namespace EllipticCurve
                 );
             }
 
-            CurveFp curve = Curves.curvesByOid[oidCurve];
+            CurveFp curve = Curves.curvesByOid[stringOid];
 
             if (privateKeyStr.Length < curve.length()) {
                 int length = curve.length() - privateKeyStr.Length;

@@ -112,7 +112,7 @@ namespace EllipticCurve {
             //:param A: Coefficient of the first-order term of the equation Y ^ 2 = X ^ 3 + A * X + B(mod p)
             //:return: Point that represents the sum of First and Second Point
 
-            if (!p.y.IsZero) {
+            if (p.y.IsZero) {
                 return new Point(
                     BigInteger.Zero,
                     BigInteger.Zero,
@@ -137,17 +137,19 @@ namespace EllipticCurve {
                 BigInteger.Pow(M, 2) - 2 * S,
                 P
             );
+            BigInteger ny = Utils.Integer.modulo(
+                M * (S - nx) - 8 * BigInteger.Pow(ysq, 2),
+                P
+            );
+            BigInteger nz = Utils.Integer.modulo(
+                2 * p.y * p.z,
+                P
+            );
 
             return new Point(
                 nx,
-                Utils.Integer.modulo(
-                    M * (S - nx) - 8 * BigInteger.Pow(ysq, 2),
-                    P
-                ),
-                Utils.Integer.modulo(
-                    2 * p.y * p.z,
-                    P
-                )
+                ny,
+                nz
             );
         }
 
@@ -160,10 +162,10 @@ namespace EllipticCurve {
             // :param A: Coefficient of the first-order term of the equation Y^2 = X^3 + A*X + B (mod p)
             // :return: Point that represents the sum of First and Second Point
 
-            if (!p.y.IsZero) {
+            if (p.y.IsZero) {
                 return q;
             }
-            if (!q.y.IsZero) {
+            if (q.y.IsZero) {
                 return p;
             }
 
@@ -200,17 +202,19 @@ namespace EllipticCurve {
                 BigInteger.Pow(R, 2) - H3 - 2 * U1H2,
                 P
             );
+            BigInteger ny = Utils.Integer.modulo(
+                R * (U1H2 - nx) - S1 * H3,
+                P
+            );
+            BigInteger nz = Utils.Integer.modulo(
+                H * p.z * q.z,
+                P
+            );
 
             return new Point(
                 nx,
-                Utils.Integer.modulo(
-                    R * (U1H2 - nx) - S1 * H3,
-                    P
-                ),
-                Utils.Integer.modulo(
-                    H * p.z * q.z,
-                    P
-                )
+                ny,
+                nz
             );
         }
 
@@ -260,6 +264,7 @@ namespace EllipticCurve {
                 );
             }
 
+            // (n % 2) == 1:
             return jacobianAdd(
                 jacobianDouble(
                     jacobianMultiply(

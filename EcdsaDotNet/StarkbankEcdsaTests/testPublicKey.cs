@@ -21,7 +21,7 @@ namespace StarkbankEcdsaTests {
         public void testDerConversion() {
             PrivateKey privateKey = new PrivateKey();
             PublicKey publicKey1 = privateKey.publicKey();
-            string der = publicKey1.toDer();
+            byte[] der = publicKey1.toDer();
             PublicKey publicKey2 = PublicKey.fromDer(der);
 
             Assert.Equal(publicKey1.point.x, publicKey2.point.x);

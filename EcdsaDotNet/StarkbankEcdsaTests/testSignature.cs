@@ -13,7 +13,7 @@ namespace StarkbankEcdsaTests
 
             Signature signature1 = Ecdsa.sign(message, privateKey);
 
-            string der = signature1.toDer();
+            byte[] der = signature1.toDer();
             Signature signature2 = Signature.fromDer(der);
 
             Assert.Equal(signature1.r, signature2.r);

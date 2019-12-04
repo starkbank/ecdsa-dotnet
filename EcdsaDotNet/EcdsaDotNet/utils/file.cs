@@ -10,6 +10,10 @@ namespace EllipticCurve.Utils {
             return sr.ReadToEnd();
         }
 
+        public static byte[] readBytes(string path) {
+            return System.IO.File.ReadAllBytes(path);
+        }
+
     }
 
 }

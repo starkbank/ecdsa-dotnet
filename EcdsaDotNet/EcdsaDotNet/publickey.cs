@@ -1,4 +1,5 @@
-﻿using System;
+﻿using System.Collections.Generic;
+using System;
 
 
 namespace EllipticCurve {
@@ -24,17 +25,17 @@ namespace EllipticCurve {
             return "\x00\x04" + xString + yString;
         }
 
-        public string toDer() {
+        public byte[] toDer() {
             int[] oidEcPublicKey = { 1, 2, 840, 10045, 2, 1 };
-            string encodedEcAndOid = Utils.Der.encodeSequence(
-                new string[] {
+            byte[] encodedEcAndOid = Utils.Der.encodeSequence(
+                new List<byte[]> {
                     Utils.Der.encodeOid(oidEcPublicKey),
                     Utils.Der.encodeOid(curve.oid)
                 }
             );
 
             return Utils.Der.encodeSequence(
-                new string[] {
+                new List<byte[]> {
                     encodedEcAndOid,
                     Utils.Der.encodeBitString(toString(true))
                 }
@@ -45,13 +46,13 @@ namespace EllipticCurve {
             return Utils.Der.toPem(toDer(), "PUBLIC KEY");
         }
 
-        public static PublicKey fromPem(string str) {
-            return fromDer(Utils.Der.fromPem(str));
+        public static PublicKey fromPem(string pem) {
+            return fromDer(Utils.Der.fromPem(pem));
         }
 
-        public static PublicKey fromDer(string str) {
-            Tuple<string, string> removeSequence1 = Utils.Der.removeSequence(str);
-            string s1 = removeSequence1.Item1;
+        public static PublicKey fromDer(byte[] der) {
+            Tuple<byte[], byte[]> removeSequence1 = Utils.Der.removeSequence(der);
+            byte[] s1 = removeSequence1.Item1;
 
             if (removeSequence1.Item2.Length > 0) {
                 throw new ArgumentException(
@@ -60,14 +61,14 @@ namespace EllipticCurve {
                 );
             }
 
-            Tuple<string, string> removeSequence2 = Utils.Der.removeSequence(s1);
-            string s2 = removeSequence2.Item1;
-            string pointBitString = removeSequence2.Item2;
+            Tuple<byte[], byte[]> removeSequence2 = Utils.Der.removeSequence(s1);
+            byte[] s2 = removeSequence2.Item1;
+            byte[] pointBitString = removeSequence2.Item2;
 
-            Tuple<int[], string> removeObject1 = Utils.Der.removeObject(s2);
-            string rest = removeObject1.Item2;
+            Tuple<int[], byte[]> removeObject1 = Utils.Der.removeObject(s2);
+            byte[] rest = removeObject1.Item2;
 
-            Tuple<int[], string> removeObject2 = Utils.Der.removeObject(rest);
+            Tuple<int[], byte[]> removeObject2 = Utils.Der.removeObject(rest);
             int[] oidCurve = removeObject2.Item1;
 
             if (removeObject2.Item2.Length > 0) {
@@ -77,7 +78,9 @@ namespace EllipticCurve {
                 );
             }
 
-            if (!Curves.curvesByOid.ContainsKey(oidCurve)) {
+            string stringOid = string.Join(",", oidCurve);
+
+            if (!Curves.curvesByOid.ContainsKey(stringOid)) {
                 int numCurves = Curves.supportedCurves.Length;
                 string[] supportedCurves = new string[numCurves];
                 for (int i=0; i < numCurves; i++) {
@@ -91,34 +94,25 @@ namespace EllipticCurve {
                 );
             }
 
-            CurveFp curve = Curves.curvesByOid[oidCurve];
+            CurveFp curve = Curves.curvesByOid[stringOid];
 
-            Tuple<string, string> removeBitString = Utils.Der.removeBitString(pointBitString);
+            Tuple<string, byte[]> removeBitString = Utils.Der.removeBitString(pointBitString);
             string pointString = removeBitString.Item1;
 
             if (removeBitString.Item2.Length > 0) {
                 throw new ArgumentException("trailing junk after public key point-string");
             }
 
-            return fromString(pointString.Substring(2), curve.name);
+            return fromString(pointString.Substring(4), curve.name);
 
         }
 
         public static PublicKey fromString(string str, string curve="secp256k1", bool validatePoint=true) {
-            CurveFp curveObject;
-            if (curve == "secp256k1") {
-                curveObject = Curves.secp256k1;
-            }
-            else if (curve == "p256" | curve == "prime256v1") {
-                curveObject = Curves.prime256v1;
-            }
-            else {
-                throw new ArgumentException("unknown curve " + curve);
-            }
+            CurveFp curveObject = Curves.getCurveByName(curve);
 
-            int baseLen = curveObject.length();
+            int baseLen = 2 * curveObject.length();
 
-            string xs = str.Substring(0, baseLen);
+            string xs = Utils.String.substring(str, 0, baseLen);
             string ys = str.Substring(baseLen);
 
             Point p = new Point(

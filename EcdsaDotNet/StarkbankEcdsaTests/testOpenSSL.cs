@@ -26,7 +26,7 @@ namespace StarkbankEcdsaTests {
             string publicKeyPem = EllipticCurve.Utils.File.read("publicKey.pem");
 
             // openssl dgst -sha256 -sign privateKey.pem -out signature.binary message.txt
-            string signatureDer = EllipticCurve.Utils.File.read("tests/signatureDer.txt");
+            byte[] signatureDer = EllipticCurve.Utils.File.readBytes("tests/signatureDer.txt");
 
             string message = EllipticCurve.Utils.File.read("message.txt");
 

@@ -18,7 +18,7 @@ namespace StarkbankEcdsaTests {
         [Fact]
         public void testDerConversion() {
             PrivateKey privateKey1 = new PrivateKey();
-            string der = privateKey1.toDer();
+            byte[] der = privateKey1.toDer();
             PrivateKey privateKey2 = PrivateKey.fromDer(der);
 
             Assert.Equal(privateKey1.secret, privateKey2.secret);
