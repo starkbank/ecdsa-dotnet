@@ -55,14 +55,14 @@ namespace EllipticCurve.Utils {
             if (num <= hex127) {
                 return combineByteArrays(new List<byte[]> {
                     bytesHexB,
-                    intToCharBytes(xBytes.Length),
+                    Bytes.intToCharBytes(xBytes.Length),
                     xBytes
                 });
             }
 
             return combineByteArrays(new List<byte[]> {
                 bytesHexB,
-                intToCharBytes(xBytes.Length + 1),
+                Bytes.intToCharBytes(xBytes.Length + 1),
                 bytesHexAt,
                 xBytes
             });
@@ -82,7 +82,7 @@ namespace EllipticCurve.Utils {
             }
 
             List<byte[]> bodyList = new List<byte[]> {
-                intToCharBytes(40 * first + second)
+                Bytes.intToCharBytes(40 * first + second)
             };
 
             for (int i=2; i < oid.Length; i++) {
@@ -99,25 +99,25 @@ namespace EllipticCurve.Utils {
 
         }
 
-        public static byte[] encodeBitString(string t) {
+        public static byte[] encodeBitString(byte[] t) {
             return combineByteArrays(new List<byte[]> {
                 bytesHexC,
                 encodeLength(t.Length),
-                BinaryAscii.binaryFromHex(t)
+                t
             });
         }
 
-        public static byte[] encodeOctetString(string t) {
+        public static byte[] encodeOctetString(byte[] t) {
             return combineByteArrays(new List<byte[]> {
                 bytesHexD,
                 encodeLength(t.Length),
-                BinaryAscii.binaryFromHex(t)
+                t
             });
         }
 
         public static byte[] encodeConstructed(int tag, byte[] value) {
             return combineByteArrays(new List<byte[]> {
-                intToCharBytes(hex129 + tag),
+                Bytes.intToCharBytes(hex129 + tag),
                 encodeLength(value.Length),
                 value
             });
@@ -126,27 +126,27 @@ namespace EllipticCurve.Utils {
         public static Tuple<byte[], byte[]> removeSequence(byte[] bytes) {
             checkSequenceError(bytes, hex0, "30");
 
-            Tuple<int, int> readLengthResult = readLength(sliceByteArray(bytes, 1));
+            Tuple<int, int> readLengthResult = readLength(Bytes.sliceByteArray(bytes, 1));
             int length = readLengthResult.Item1;
             int lengthLen = readLengthResult.Item2;
 
             int endSeq = 1 + lengthLen + length;
 
             return new Tuple<byte[], byte[]>(
-                sliceByteArray(bytes, 1 + lengthLen, length),
-                sliceByteArray(bytes, endSeq)
+                Bytes.sliceByteArray(bytes, 1 + lengthLen, length),
+                Bytes.sliceByteArray(bytes, endSeq)
             ) ;
         }
 
         public static Tuple<BigInteger, byte[]> removeInteger(byte[] bytes) {
             checkSequenceError(bytes, hexB, "02");
 
-            Tuple<int, int> readLengthResult = readLength(sliceByteArray(bytes, 1));
+            Tuple<int, int> readLengthResult = readLength(Bytes.sliceByteArray(bytes, 1));
             int length = readLengthResult.Item1;
             int lengthLen = readLengthResult.Item2;
 
-            byte[] numberBytes = sliceByteArray(bytes, 1 + lengthLen, length);
-            byte[] rest = sliceByteArray(bytes, 1 + lengthLen + length);
+            byte[] numberBytes = Bytes.sliceByteArray(bytes, 1 + lengthLen, length);
+            byte[] rest = Bytes.sliceByteArray(bytes, 1 + lengthLen + length);
             int nBytes = numberBytes[0];
 
             if (nBytes >= hex160) {
@@ -163,19 +163,19 @@ namespace EllipticCurve.Utils {
         public static Tuple<int[], byte[]> removeObject(byte[] bytes) {
             checkSequenceError(bytes, hexF, "06");
 
-            Tuple<int, int> readLengthResult = readLength(sliceByteArray(bytes, 1));
+            Tuple<int, int> readLengthResult = readLength(Bytes.sliceByteArray(bytes, 1));
             int length = readLengthResult.Item1;
             int lengthLen = readLengthResult.Item2;
 
-            byte[] body = sliceByteArray(bytes, 1 + lengthLen, length);
-            byte[] rest = sliceByteArray(bytes, 1 + lengthLen + length);
+            byte[] body = Bytes.sliceByteArray(bytes, 1 + lengthLen, length);
+            byte[] rest = Bytes.sliceByteArray(bytes, 1 + lengthLen + length);
 
             List<int> numbers = new List<int>();
             Tuple<int, int> readNumberResult;
             while (body.Length > 0) {
                 readNumberResult = readNumber(body);
                 numbers.Add(readNumberResult.Item1);
-                body = sliceByteArray(body, readNumberResult.Item2);
+                body = Bytes.sliceByteArray(body, readNumberResult.Item2);
             }
 
             int n0 = numbers[0];
@@ -192,30 +192,30 @@ namespace EllipticCurve.Utils {
             );
         }
 
-        public static Tuple<string, byte[]> removeBitString(byte[] bytes) {
+        public static Tuple<byte[], byte[]> removeBitString(byte[] bytes) {
             checkSequenceError(bytes, hexC, "03");
 
-            Tuple<int, int> readLengthResult = readLength(sliceByteArray(bytes, 1));
+            Tuple<int, int> readLengthResult = readLength(Bytes.sliceByteArray(bytes, 1));
             int length = readLengthResult.Item1;
             int lengthLen = readLengthResult.Item2;
 
-            byte[] body = sliceByteArray(bytes, 1 + lengthLen, length);
-            byte[] rest = sliceByteArray(bytes, 1 + lengthLen + length);
+            byte[] body = Bytes.sliceByteArray(bytes, 1 + lengthLen, length);
+            byte[] rest = Bytes.sliceByteArray(bytes, 1 + lengthLen + length);
 
-            return new Tuple<string, byte[]>(BinaryAscii.hexFromBinary(body), rest);
+            return new Tuple<byte[], byte[]>(body, rest);
         }
 
-        public static Tuple<string, byte[]> removeOctetString(byte[] bytes) {
+        public static Tuple<byte[], byte[]> removeOctetString(byte[] bytes) {
             checkSequenceError(bytes, hexD, "04");
 
-            Tuple<int, int> readLengthResult = readLength(sliceByteArray(bytes, 1));
+            Tuple<int, int> readLengthResult = readLength(Bytes.sliceByteArray(bytes, 1));
             int length = readLengthResult.Item1;
             int lengthLen = readLengthResult.Item2;
 
-            byte[] body = sliceByteArray(bytes, 1 + lengthLen, length);
-            byte[] rest = sliceByteArray(bytes, 1 + lengthLen + length);
+            byte[] body = Bytes.sliceByteArray(bytes, 1 + lengthLen, length);
+            byte[] rest = Bytes.sliceByteArray(bytes, 1 + lengthLen + length);
 
-            return new Tuple<string, byte[]>(BinaryAscii.hexFromBinary(body), rest);
+            return new Tuple<byte[], byte[]>(body, rest);
         }
 
         public static Tuple<int, byte[], byte[]> removeConstructed(byte[] bytes) {
@@ -227,12 +227,12 @@ namespace EllipticCurve.Utils {
 
             int tag = s0 & hex31;
 
-            Tuple<int, int> readLengthResult = readLength(sliceByteArray(bytes, 1));
+            Tuple<int, int> readLengthResult = readLength(Bytes.sliceByteArray(bytes, 1));
             int length = readLengthResult.Item1;
             int lengthLen = readLengthResult.Item2;
 
-            byte[] body = sliceByteArray(bytes, 1 + lengthLen, length);
-            byte[] rest = sliceByteArray(bytes, 1 + lengthLen + length);
+            byte[] body = Bytes.sliceByteArray(bytes, 1 + lengthLen, length);
+            byte[] rest = Bytes.sliceByteArray(bytes, 1 + lengthLen + length);
 
             return new Tuple<int, byte[], byte[]>(tag, body, rest);
         }
@@ -263,7 +263,25 @@ namespace EllipticCurve.Utils {
             lines.Add("-----END " + name + "-----");
 
             return string.Join("\n", lines);
+        }
 
+        public static byte[] combineByteArrays(List<byte[]> byteArrayList) {
+            int totalLength = 0;
+            foreach (byte[] bytes in byteArrayList)
+            {
+                totalLength += bytes.Length;
+            }
+
+            byte[] combined = new byte[totalLength];
+            int consumedLength = 0;
+
+            foreach (byte[] bytes in byteArrayList)
+            {
+                Array.Copy(bytes, 0, combined, consumedLength, bytes.Length);
+                consumedLength += bytes.Length;
+            }
+
+            return combined;
         }
 
         private static byte[] encodeLength(int length) {
@@ -272,7 +290,7 @@ namespace EllipticCurve.Utils {
             }
 
             if (length < hex160) {
-                return intToCharBytes(length);
+                return Bytes.intToCharBytes(length);
             }
 
             string s = length.ToString("X");
@@ -284,7 +302,7 @@ namespace EllipticCurve.Utils {
             int lengthLen = bytes.Length;
 
             return combineByteArrays(new List<byte[]> {
-                intToCharBytes(hex160 | lengthLen),
+                Bytes.intToCharBytes(hex160 | lengthLen),
                 bytes
             });
         }
@@ -309,7 +327,7 @@ namespace EllipticCurve.Utils {
             List<byte[]> byteList = new List<byte[]>();
 
             foreach(int digit in b128Digits) {
-                byteList.Add(intToCharBytes(digit));
+                byteList.Add(Bytes.intToCharBytes(digit));
             }
 
             return combineByteArrays(byteList);
@@ -330,7 +348,7 @@ namespace EllipticCurve.Utils {
 
             return new Tuple<int, int>(
                 int.Parse(
-                    BinaryAscii.hexFromBinary(sliceByteArray(bytes, 1, lengthLen)),
+                    BinaryAscii.hexFromBinary(Bytes.sliceByteArray(bytes, 1, lengthLen)),
                     System.Globalization.NumberStyles.HexNumber
                 ),
                 1 + lengthLen
@@ -374,39 +392,6 @@ namespace EllipticCurve.Utils {
             return str[0];
         }
 
-        private static byte[] combineByteArrays(List<byte[]> byteArrayList) {
-            int totalLength = 0;
-            foreach(byte[] bytes in byteArrayList) {
-                totalLength += bytes.Length;
-            }
-
-            byte[] combined = new byte[totalLength];
-            int consumedLength = 0;
-
-            foreach (byte[] bytes in byteArrayList) {
-                Array.Copy(bytes, 0, combined, consumedLength, bytes.Length);
-                consumedLength += bytes.Length;
-            }
-
-            return combined;
-        }
-
-        private static byte[] sliceByteArray(byte[] bytes, int start) {
-            int newLength = bytes.Length - start;
-            byte[] result = new byte[newLength];
-            Array.Copy(bytes, start, result, 0, newLength);
-            return result;
-        }
-
-        private static byte[] sliceByteArray(byte[] bytes, int start, int length) {
-            int newLength = Math.Min(bytes.Length - start, length);
-            byte[] result = new byte[newLength];
-            Array.Copy(bytes, start, result, 0, newLength);
-            return result;
-        }
-
-        private static byte[] intToCharBytes(int num) {
-            return new byte[] { (byte)Convert.ToChar(num) };
-        }
+        
     }
 }

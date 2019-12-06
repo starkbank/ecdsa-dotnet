@@ -1,6 +1,7 @@
 ﻿using Xunit;
 using EllipticCurve;
 
+
 namespace StarkbankEcdsaTests {
 
     public class TestPublicKey {
@@ -33,7 +34,7 @@ namespace StarkbankEcdsaTests {
         public void testStringConversion() {
             PrivateKey privateKey = new PrivateKey();
             PublicKey publicKey1 = privateKey.publicKey();
-            string str = publicKey1.toString();
+            byte[] str = publicKey1.toString();
             PublicKey publicKey2 = PublicKey.fromString(str);
 
             Assert.Equal(publicKey1.point.x, publicKey2.point.x);

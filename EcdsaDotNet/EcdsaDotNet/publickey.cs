@@ -15,14 +15,22 @@ namespace EllipticCurve {
             this.curve = curve;
         }
 
-        public string toString(bool encoded=false) {
-            string xString = Utils.BinaryAscii.hexFromNumber(point.x, curve.length());
-            string yString = Utils.BinaryAscii.hexFromNumber(point.y, curve.length());
+        public byte[] toString(bool encoded=false) {
+            byte[] xString = Utils.BinaryAscii.stringFromNumber(point.x, curve.length());
+            byte[] yString = Utils.BinaryAscii.stringFromNumber(point.y, curve.length());
 
             if (encoded) {
-                return xString + yString;
+                return Utils.Der.combineByteArrays(new List<byte[]> {
+                    Utils.BinaryAscii.binaryFromHex("00"),
+                    Utils.BinaryAscii.binaryFromHex("04"), 
+                    xString,
+                    yString
+                });
             }
-            return "\x00\x04" + xString + yString;
+            return Utils.Der.combineByteArrays(new List<byte[]> {
+                xString,
+                yString
+            });
         }
 
         public byte[] toDer() {
@@ -96,24 +104,28 @@ namespace EllipticCurve {
 
             CurveFp curve = Curves.curvesByOid[stringOid];
 
-            Tuple<string, byte[]> removeBitString = Utils.Der.removeBitString(pointBitString);
-            string pointString = removeBitString.Item1;
+            Tuple<byte[], byte[]> removeBitString = Utils.Der.removeBitString(pointBitString);
+            byte[] pointString = removeBitString.Item1;
 
             if (removeBitString.Item2.Length > 0) {
                 throw new ArgumentException("trailing junk after public key point-string");
             }
 
-            return fromString(pointString.Substring(4), curve.name);
+            return fromString(Utils.Bytes.sliceByteArray(pointString, 2), curve.name);
 
         }
 
-        public static PublicKey fromString(string str, string curve="secp256k1", bool validatePoint=true) {
+        public static PublicKey fromString(byte[] str, string curve="secp256k1", bool validatePoint=true) {
             CurveFp curveObject = Curves.getCurveByName(curve);
 
-            int baseLen = 2 * curveObject.length();
+            int baseLen = curveObject.length();
 
-            string xs = Utils.String.substring(str, 0, baseLen);
-            string ys = str.Substring(baseLen);
+            if (str.Length != 2 * baseLen) {
+                throw new ArgumentException("string length [" + str.Length + "] should be " + 2 * baseLen);
+            }
+
+            string xs = Utils.BinaryAscii.hexFromBinary(Utils.Bytes.sliceByteArray(str, 0, baseLen));
+            string ys = Utils.BinaryAscii.hexFromBinary(Utils.Bytes.sliceByteArray(str, baseLen));
 
             Point p = new Point(
                 Utils.BinaryAscii.numberFromHex(xs),

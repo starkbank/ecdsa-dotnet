@@ -16,11 +16,15 @@ namespace EllipticCurve.Utils {
             return hex.ToString();
         }
 
-        public static byte[] binaryFromHex(string hexString) {
-            int numberChars = hexString.Length;
+        public static byte[] binaryFromHex(string hex) {
+            int numberChars = hex.Length;
+            if ((numberChars % 2) == 1) {
+                hex = "0" + hex;
+                numberChars++;
+            }
             byte[] bytes = new byte[numberChars / 2];
-            for (int i = 0; i < numberChars - 1; i += 2) {
-                bytes[i / 2] = Convert.ToByte(String.substring(hexString, i, 2), 16);
+            for (int i = 0; i < numberChars; i += 2) {
+                bytes[i / 2] = Convert.ToByte(String.substring(hex, i, 2), 16);
             }
             return bytes;
         }
@@ -33,10 +37,28 @@ namespace EllipticCurve.Utils {
         }
 
         public static string hexFromNumber(BigInteger number, int length) {
-            string formatString = "X" + (2 * length).ToString();
-            return number.ToString(formatString);
+            string hex = number.ToString("X");
+
+            if (hex.Length <= 2 * length) {
+                hex = (new string('0', 2 * length - hex.Length)) + hex;
+            } else if (hex[0] == '0') {
+                hex = hex.Substring(1);
+            } else {
+                throw new ArgumentException("number hex length is bigger than 2*length: " + number + ", length=" + length);
+            }
+            return hex;
         }
 
+        public static byte[] stringFromNumber(BigInteger number, int length) {
+            string hex = hexFromNumber(number, length);
+
+            return binaryFromHex(hex);
+        }
+
+        public static BigInteger numberFromString(byte[] bytes) {
+            string hex = hexFromBinary(bytes);
+            return numberFromHex(hex);
+        }
     }
 
 }

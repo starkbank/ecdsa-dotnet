@@ -3,10 +3,10 @@ using System.Numerics;
 using System;
 
 
-namespace EllipticCurve
-{
-    public class PrivateKey
-    {
+namespace EllipticCurve {
+
+    public class PrivateKey {
+
         public CurveFp curve { get; private set; }
         public BigInteger secret { get; private set; }
 
@@ -24,19 +24,19 @@ namespace EllipticCurve
             return new PublicKey(publicPoint, curve);
         }
 
-        public string toString() {
-            return Utils.BinaryAscii.hexFromNumber(secret, curve.length());
+        public byte[] toString() {
+            return Utils.BinaryAscii.stringFromNumber(secret, curve.length());
         }
 
         public byte[] toDer() {
-            string encodedPublicKey = publicKey().toString(true);
+            byte[] encodedPublicKey = publicKey().toString(true);
 
             return Utils.Der.encodeSequence(
                 new List<byte[]> {
                     Utils.Der.encodeInteger(1),
                     Utils.Der.encodeOctetString(toString()),
                     Utils.Der.encodeConstructed(0, Utils.Der.encodeOid(curve.oid)),
-                    Utils.Der.encodeConstructed(1, Utils.Der.encodeBitString(encodedPublicKey))
+                    Utils.Der.encodeConstructed(1, encodedPublicKey)
                 }
             );
         }
@@ -66,8 +66,8 @@ namespace EllipticCurve
                 throw new ArgumentException("expected '1' at start of DER private key, got " + removeInteger.Item1.ToString());
             }
 
-            Tuple<string, byte[]> removeOctetString = Utils.Der.removeOctetString(removeInteger.Item2);
-            string privateKeyStr = removeOctetString.Item1;
+            Tuple<byte[], byte[]> removeOctetString = Utils.Der.removeOctetString(removeInteger.Item2);
+            byte[] privateKeyStr = removeOctetString.Item1;
 
             Tuple<int, byte[], byte[]> removeConstructed = Utils.Der.removeConstructed(removeOctetString.Item2);
             int tag = removeConstructed.Item1;
@@ -108,18 +108,18 @@ namespace EllipticCurve
             if (privateKeyStr.Length < curve.length()) {
                 int length = curve.length() - privateKeyStr.Length;
                 string padding = "";
-                for (int i=0; i < length; i++) {
-                    padding += "\x00";
+                for (int i = 0; i < length; i++) {
+                    padding += "00";
                 }
-                privateKeyStr = padding + privateKeyStr;
+                    privateKeyStr = Utils.Der.combineByteArrays(new List<byte[]> { Utils.BinaryAscii.binaryFromHex(padding), privateKeyStr });
             }
 
             return fromString(privateKeyStr, curve.name);
 
         }
 
-        public static PrivateKey fromString (string str, string curve="secp256k1") {
-            return new PrivateKey(curve, Utils.BinaryAscii.numberFromHex(str));
+        public static PrivateKey fromString (byte[] str, string curve="secp256k1") {
+            return new PrivateKey(curve, Utils.BinaryAscii.numberFromString(str));
         }
     }
 }
