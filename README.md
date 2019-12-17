@@ -2,7 +2,7 @@
 
 ### Overview
 
-This is a C# fork of [ecdsa-python]
+This is a C# fork of [ecdsa-python] compatible with .NET Standard 2.1+
 
 It is compatible with OpenSSL.
 It uses some elegant math such as Jacobian Coordinates to speed up the ECDSA on pure C#.
