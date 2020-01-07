@@ -3,6 +3,17 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <RootNamespace>EllipticCurve</RootNamespace>
+    <PackOnBuild>true</PackOnBuild>
+    <PackageId>starkbank-ecdsa</PackageId>
+    <PackageVersion>0.0.1</PackageVersion>
+    <Authors>Stark Bank</Authors>
+    <PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
+    <Owners>Stark Bank</Owners>
+    <PackageProjectUrl>https://github.com/starkbank/ecdsa-dotnet</PackageProjectUrl>
+    <Summary>Pure C# implementation of the Elliptic Curve Digital Signature Algorithm (ECDSA)</Summary>
+    <Title>Stark Bank ECDSA</Title>
+    <Description>Pure C# implementation of the Elliptic Curve Digital Signature Algorithm (ECDSA) by Stark Bank</Description>
+    <PackageTags>ecdsa, digital-signature, elliptic-curve</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

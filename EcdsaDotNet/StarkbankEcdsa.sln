@@ -20,4 +20,12 @@ Global
 		{5012AA56-C71B-4001-9BC2-2BAC7127BA8E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5012AA56-C71B-4001-9BC2-2BAC7127BA8E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
+	GlobalSection(MonoDevelopProperties) = preSolution
+		Policies = $0
+		$0.DotNetNamingPolicy = $1
+		$1.DirectoryNamespaceAssociation = PrefixedHierarchical
+		$0.StandardHeader = $2
+		$0.VersionControlPolicy = $3
+		description = Pure C# implementation of the Elliptic Curve Digital Signature Algorithm (ECDSA) by Stark Bank
+	EndGlobalSection
 EndGlobal
