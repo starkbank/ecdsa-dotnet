@@ -2,10 +2,7 @@
 
 ### Overview
 
-This is a C# fork of [ecdsa-python] compatible with .NET Standard 2.1+
-
-It is compatible with OpenSSL.
-It uses some elegant math such as Jacobian Coordinates to speed up the ECDSA on pure C#.
+This is a pure C# implementation of the Elliptic Curve Digital Signature Algorithm. It is compatible with .NET Standard 2.1+. It is also compatible with OpenSSL. It uses some elegant math such as Jacobian Coordinates to speed up the ECDSA on pure C#.
 
 ### Installation
 
