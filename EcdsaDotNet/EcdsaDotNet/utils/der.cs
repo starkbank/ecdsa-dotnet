@@ -238,7 +238,7 @@ namespace EllipticCurve.Utils {
         }
 
         public static byte[] fromPem(string pem) {
-            string[] split = pem.Split("\n");
+            string[] split = pem.Split(new string[] { "\n" }, StringSplitOptions.None);
             List<string> stripped = new List<string>();
 
             for (int i = 0; i < split.Length; i++) {

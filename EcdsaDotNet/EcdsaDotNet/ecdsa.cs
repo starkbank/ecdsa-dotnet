@@ -51,9 +51,11 @@ namespace EllipticCurve {
         }
 
         private static string sha256(string message) {
-            using SHA256 sha256Hash = SHA256.Create();
+            SHA256 sha256Hash = SHA256.Create();
 
             byte[] bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(message));
+
+            sha256Hash.Clear();
 
             StringBuilder builder = new StringBuilder();
             for (int i = 0; i < bytes.Length; i++) {

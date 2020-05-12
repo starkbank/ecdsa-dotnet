@@ -46,7 +46,7 @@ namespace EllipticCurve {
         }
 
         public static PrivateKey fromPem (string str) {
-            string[] split = str.Split("-----BEGIN EC PRIVATE KEY-----");
+            string[] split = str.Split(new string[] { "-----BEGIN EC PRIVATE KEY-----" }, StringSplitOptions.None);
 
             if (split.Length != 2) {
                 throw new ArgumentException("invalid PEM");
