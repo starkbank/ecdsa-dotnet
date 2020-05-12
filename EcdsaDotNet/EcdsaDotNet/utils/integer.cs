@@ -32,19 +32,7 @@ namespace EllipticCurve.Utils {
             byte[] randomBytes = new byte[bytesNeeded];
             random.NextBytes(randomBytes);
 
-            BigInteger randomValue = BigInteger.Zero;
-
-            /* Turn the random bytes into an integer, using bitwise operations. */
-            for (int i=0; i < bytesNeeded; i++) {
-                randomValue |= new BigInteger(randomBytes[i]) << (i * 8);
-            }
-
-            /* TODO: check new BigInteger(randomBytes) */
-            //if (new BigInteger(randomBytes) == randomValue)
-            //{
-            //    throw ArgumentException("deu certo");
-            //}
-            //throw ArgumentException("deu errado");
+            BigInteger randomValue = new BigInteger(randomBytes);
 
             /* We apply the mask to reduce the amount of attempts we might need
                 * to make to get a number that is in range. This is somewhat like
