@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
+    <TargetFrameworks>netstandard1.3;netstandard2.0;netstandard2.1;net40;net452</TargetFrameworks>
     <RootNamespace>EllipticCurve</RootNamespace>
     <PackOnBuild>true</PackOnBuild>
     <PackageId>starkbank-ecdsa</PackageId>
