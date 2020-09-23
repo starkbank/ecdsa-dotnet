@@ -30,7 +30,7 @@ namespace EllipticCurve.Utils {
         }
 
         public static BigInteger numberFromHex(string hex) {
-            if (((hex.Length % 2) == 1) | hex[0] != '0') {
+            if (((hex.Length % 2) == 1) || hex[0] != '0') {
                 hex = "0" + hex; // if the hex string doesnt start with 0, the parse will assume its negative
             }
             return BigInteger.Parse(hex, NumberStyles.HexNumber);
