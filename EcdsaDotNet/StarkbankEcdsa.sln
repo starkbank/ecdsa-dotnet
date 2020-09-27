@@ -27,6 +27,6 @@ Global
 		$0.StandardHeader = $2
 		$0.VersionControlPolicy = $3
 		description = Pure C# implementation of the Elliptic Curve Digital Signature Algorithm (ECDSA) by Stark Bank
-		version = 1.2.0
+		version = 1.2.1
 	EndGlobalSection
 EndGlobal
