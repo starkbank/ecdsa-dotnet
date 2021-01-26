@@ -131,5 +131,3 @@ Console.WriteLine(signature.toBase64());
 
 ### Run all unit tests
 Run StarkbankEcdsaTests on XUnit in Visual Studio
-
-[ecdsa-python]: https://github.com/starkbank/ecdsa-python
