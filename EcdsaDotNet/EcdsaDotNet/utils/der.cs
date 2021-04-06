@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Numerics;
 using System;
-using System.Text;
 
 namespace EllipticCurve.Utils {
 
@@ -9,8 +8,8 @@ namespace EllipticCurve.Utils {
 
         private static readonly int hex31 = 0x1f;
         private static readonly int hex127 = 0x7f;
-        private static readonly int hex129 = 0xa0;
-        private static readonly int hex160 = 0x80;
+        private static readonly int hex128 = 0x80;
+        private static readonly int hex160 = 0xa0;
         private static readonly int hex224 = 0xe0;
 
         private static readonly string hexAt = "00";
@@ -117,7 +116,7 @@ namespace EllipticCurve.Utils {
 
         public static byte[] encodeConstructed(int tag, byte[] value) {
             return combineByteArrays(new List<byte[]> {
-                Bytes.intToCharBytes(hex129 + tag),
+                Bytes.intToCharBytes(hex160 + tag),
                 encodeLength(value.Length),
                 value
             });
@@ -135,7 +134,7 @@ namespace EllipticCurve.Utils {
             return new Tuple<byte[], byte[]>(
                 Bytes.sliceByteArray(bytes, 1 + lengthLen, length),
                 Bytes.sliceByteArray(bytes, endSeq)
-            ) ;
+            );
         }
 
         public static Tuple<BigInteger, byte[]> removeInteger(byte[] bytes) {
@@ -149,8 +148,8 @@ namespace EllipticCurve.Utils {
             byte[] rest = Bytes.sliceByteArray(bytes, 1 + lengthLen + length);
             int nBytes = numberBytes[0];
 
-            if (nBytes >= hex160) {
-                throw new ArgumentException("nBytes must be < 160");
+            if (nBytes >= hex128) {
+                throw new ArgumentException("first byte of integer must be < 128");
             }
 
             return new Tuple<BigInteger, byte[]> (
@@ -221,7 +220,7 @@ namespace EllipticCurve.Utils {
         public static Tuple<int, byte[], byte[]> removeConstructed(byte[] bytes) {
             int s0 = extractFirstInt(bytes);
 
-            if ((s0 & hex224) != hex129) {
+            if ((s0 & hex224) != hex160) {
                 throw new ArgumentException("wanted constructed tag (0xa0-0xbf), got " + s0);
             }
 
@@ -289,7 +288,7 @@ namespace EllipticCurve.Utils {
                 throw new ArgumentException("length cannot be negative");
             }
 
-            if (length < hex160) {
+            if (length < hex128) {
                 return Bytes.intToCharBytes(length);
             }
 
@@ -302,7 +301,7 @@ namespace EllipticCurve.Utils {
             int lengthLen = bytes.Length;
 
             return combineByteArrays(new List<byte[]> {
-                Bytes.intToCharBytes(hex160 | lengthLen),
+                Bytes.intToCharBytes(hex128 | lengthLen),
                 bytes
             });
         }
@@ -311,7 +310,7 @@ namespace EllipticCurve.Utils {
             List<int> b128Digits = new List<int>();
 
             while (n > 0) {
-                b128Digits.Insert(0, (n & hex127) | hex160);
+                b128Digits.Insert(0, (n & hex127) | hex128);
                 n >>= 7;
             }
 
@@ -336,7 +335,7 @@ namespace EllipticCurve.Utils {
         private static Tuple<int, int> readLength(byte[] bytes) {
             int num = extractFirstInt(bytes);
 
-            if ((num & hex160) == 0) {
+            if ((num & hex128) == 0) {
                 return new Tuple<int, int>(num & hex127, 1);
             }
 
@@ -369,7 +368,7 @@ namespace EllipticCurve.Utils {
                 d = str[lengthLen];
                 number += (d & hex127);
                 lengthLen += 1;
-                if ((d & hex160) == 0) {
+                if ((d & hex128) == 0) {
                     break;
                 }
             }
