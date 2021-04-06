@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Numerics;
-
+using System.Security.Cryptography;
 
 namespace EllipticCurve.Utils {
 
     public static class Integer {
-
-        static Random random = new Random();
-
         public static BigInteger modulo(BigInteger dividend, BigInteger divisor) {
             BigInteger remainder = BigInteger.Remainder(dividend, divisor);
             
@@ -30,7 +27,10 @@ namespace EllipticCurve.Utils {
             BigInteger mask = response.Item2;
 
             byte[] randomBytes = new byte[bytesNeeded];
-            random.NextBytes(randomBytes);
+            using (var random = RandomNumberGenerator.Create())
+            {
+                random.GetBytes(randomBytes);
+            }
 
             BigInteger randomValue = new BigInteger(randomBytes);
 
