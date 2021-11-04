@@ -24,6 +24,14 @@ namespace EllipticCurve {
             CurveFp curve = publicKey.curve;
             BigInteger sigR = signature.r;
             BigInteger sigS = signature.s;
+
+            if (sigR < 1 || sigR >= curve.N) {
+                return false;
+            }
+            if (sigS < 1 || sigS >= curve.N) {
+                return false;
+            }
+
             BigInteger inv = EcdsaMath.inv(sigS, curve.N);
 
             Point u1 = EcdsaMath.multiply(
