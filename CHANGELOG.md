@@ -13,8 +13,14 @@ Given a version number MAJOR.MINOR.PATCH, increment:
 
 
 ## [Unreleased]
+
+## [1.3.2] - 2021-11-04
 ### Fixed
-- signature r and s range check
+- Signature r and s range check
+
+## [1.3.1] - 2021-04-06
+### Fixed
+- swapped hex names (hex129, hex160, hex128) in der utils
 
 ## [1.3.0] - 2021-01-26
 ### Added
