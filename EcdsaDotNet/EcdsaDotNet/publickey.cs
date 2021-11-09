@@ -132,21 +132,30 @@ namespace EllipticCurve {
                 Utils.BinaryAscii.numberFromHex(ys)
             );
 
-            if (validatePoint & !curveObject.contains(p)) {
+            PublicKey publicKey = new PublicKey(p, curveObject);
+            if (!validatePoint) {
+                return publicKey;
+            }
+            if (p.isAtInfinity()) {
+                throw new ArgumentException("Public Key point is at infinity");
+            }
+            if (!curveObject.contains(p)) {
                 throw new ArgumentException(
-                    "point (" +
-                    p.x.ToString() +
-                    ", " +
-                    p.y.ToString() +
-                    ") is not valid for curve " +
+                    "Point (" +
+                    p.x.ToString() + "," +
+                    p.y.ToString() + ") is not valid for curve " +
                     curveObject.name
                 );
             }
-
-            return new PublicKey(p, curveObject);
-
+            if (!EcdsaMath.multiply(p, curveObject.N, curveObject.N, curveObject.A, curveObject.P).isAtInfinity()) {
+                throw new ArgumentException(
+                    "Point (" +
+                    p.x.ToString() + "," +
+                    p.y.ToString() + ") * " +
+                    curveObject.name + ".N is not at infinity"
+                );
+            }
+            return publicKey;
         }
-
     }
-
 }
