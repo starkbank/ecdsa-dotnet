@@ -28,10 +28,19 @@ namespace EllipticCurve
         }
 
         public bool contains(Point p) {
-            return Utils.Integer.modulo(
+            if (p.x < 0 || p.x > this.P - 1) {
+                return false;
+            }
+            if (p.y < 0 || p.y > this.P - 1) {
+                return false;
+            }
+            if (!Utils.Integer.modulo(
                 BigInteger.Pow(p.y, 2) - (BigInteger.Pow(p.x, 3) + A * p.x + B),
                 P
-            ).IsZero;
+            ).IsZero) {
+                return false;
+            }
+            return true;
         }
 
         public int length() {

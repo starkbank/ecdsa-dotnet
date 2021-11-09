@@ -48,14 +48,16 @@ namespace EllipticCurve {
                 curve.A,
                 curve.P
             );
-            Point add = EcdsaMath.add(
+            Point v = EcdsaMath.add(
                 u1,
                 u2,
                 curve.A,
                 curve.P
             );
-
-            return sigR == add.x;
+            if (v.isAtInfinity()) {
+                return false;
+            }
+            return Utils.Integer.modulo(v.x, curve.N) == sigR;
         }
 
         private static string sha256(string message) {

@@ -26,6 +26,13 @@ namespace StarkbankEcdsaTests {
             Assert.False(Ecdsa.verify(message2, signature, publicKey));
         }
 
-    }
+        [Fact]
+        public void testZeroSignature() {
+            PrivateKey privateKey = new PrivateKey();
+            PublicKey publicKey = privateKey.publicKey();
+            string message = "This is the wrong message";
 
+            Assert.False(Ecdsa.verify(message, new Signature(0, 0), publicKey));
+        }
+    }
 }

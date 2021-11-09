@@ -16,5 +16,9 @@ namespace EllipticCurve {
             this.y = y;
             this.z = zeroZ;
         }
+
+        public bool isAtInfinity() {
+            return this.y == 0;
+        }
     }
 }
