@@ -1,20 +1,27 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard1.3;netstandard2.0;netstandard2.1;net40;net452</TargetFrameworks>
-    <RootNamespace>EllipticCurve</RootNamespace>
-    <PackOnBuild>true</PackOnBuild>
-    <PackageId>starkbank-ecdsa</PackageId>
-    <PackageVersion>1.3.3</PackageVersion>
-    <Authors>Stark Bank</Authors>
-    <PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
-    <Owners>Stark Bank</Owners>
-    <PackageProjectUrl>https://github.com/starkbank/ecdsa-dotnet</PackageProjectUrl>
-    <Summary>Pure C# implementation of the Elliptic Curve Digital Signature Algorithm (ECDSA)</Summary>
     <Title>Stark Bank ECDSA</Title>
+    <Authors>Stark Bank</Authors>
+    <Owners>Stark Bank</Owners>
     <Description>Pure C# implementation of the Elliptic Curve Digital Signature Algorithm (ECDSA) by Stark Bank</Description>
-    <PackageTags>ecdsa, digital-signature, elliptic-curve</PackageTags>
+    <Summary>Pure C# implementation of the Elliptic Curve Digital Signature Algorithm (ECDSA)</Summary>
+    <AssemblyTitle>StarkBankEcdsa</AssemblyTitle>
+    <AssemblyName>StarkBankEcdsa</AssemblyName>
+    <RootNamespace>EllipticCurve</RootNamespace>
+    <VersionPrefix>1.3.3</VersionPrefix>
+    <Version>1.3.3</Version>
     <ReleaseVersion>1.3.3</ReleaseVersion>
+    <PackageVersion>1.3.3</PackageVersion>
+    <TargetFrameworks>netstandard1.3;netstandard2.0;netstandard2.1;net40;net452</TargetFrameworks>
+    <PackageId>starkbank-ecdsa</PackageId>
+    <PackageTags>starkbank;ecdsa;elliptic-curve;digital-signature</PackageTags>
+    <!-- <PackageIconUrl>http://starkbank.com/logo.png</PackageIconUrl> -->
+    <!-- <PackageIcon>icon.png</PackageIcon> -->
+    <PackageProjectUrl>https://github.com/starkbank/ecdsa-dotnet</PackageProjectUrl>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackOnBuild>true</PackOnBuild>
     <NeutralLanguage>en-US</NeutralLanguage>
   </PropertyGroup>
 
@@ -35,5 +42,7 @@
 
   <ItemGroup>
     <Folder Include="utils\" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="" />
+    <!-- <None Include="icon.png" Pack="true" Visible="false" PackagePath="" /> -->
   </ItemGroup>
 </Project>
