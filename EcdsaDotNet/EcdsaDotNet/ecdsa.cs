@@ -1,56 +1,103 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using System.Numerics;
 using System.Text;
+using System;
 
 namespace EllipticCurve {
 
     public static class Ecdsa {
 
-        public static Signature sign(string message, PrivateKey privateKey) {
-            string hashMessage = sha256(message);
-            BigInteger numberMessage = Utils.BinaryAscii.numberFromHex(hashMessage);
+        public static Signature sign(string message, PrivateKey privateKey, string hashfunc = "sha256") {
             CurveFp curve = privateKey.curve;
-            BigInteger randNum = Utils.Integer.randomBetween(BigInteger.One, curve.N - 1);
-            Point randSignPoint = EcdsaMath.multiply(curve.G, randNum, curve.N, curve.A, curve.P);
-            BigInteger r = Utils.Integer.modulo(randSignPoint.x, curve.N);
-            BigInteger s = Utils.Integer.modulo((numberMessage + r * privateKey.secret) * (EcdsaMath.inv(randNum, curve.N)), curve.N);
+            byte[] byteMessage = computeHash(message, hashfunc);
+            int orderBitLen = Utils.Integer.bitLength(curve.N);
+            BigInteger numberMessage = Utils.Integer.numberFromBytesBE(byteMessage, orderBitLen);
 
-            return new Signature(r, s);
+            int hashLen = byteMessage.Length;
+            int orderByteLen = (orderBitLen + 7) / 8;
+
+            BigInteger r = BigInteger.Zero, s = BigInteger.Zero;
+            Point randSignPoint = null;
+
+            // RFC 6979 HMAC-DRBG state
+            byte[] secretBytes = Utils.Integer.bigIntToBytes(privateKey.secret, orderByteLen);
+            BigInteger hashReduced = Utils.Integer.modulo(Utils.Integer.numberFromBytesBE(byteMessage, orderBitLen), curve.N);
+            byte[] hashOctets = Utils.Integer.bigIntToBytes(hashReduced, orderByteLen);
+
+            byte[] V = new byte[hashLen];
+            for (int i = 0; i < hashLen; i++) V[i] = 0x01;
+            byte[] K = new byte[hashLen];
+
+            K = Utils.Integer.hmacCompute(hashfunc, K, Utils.Integer.concat(V, new byte[] { 0x00 }, secretBytes, hashOctets));
+            V = Utils.Integer.hmacCompute(hashfunc, K, V);
+            K = Utils.Integer.hmacCompute(hashfunc, K, Utils.Integer.concat(V, new byte[] { 0x01 }, secretBytes, hashOctets));
+            V = Utils.Integer.hmacCompute(hashfunc, K, V);
+
+            while (r.IsZero || s.IsZero) {
+                byte[] T = new byte[0];
+                while (T.Length * 8 < orderBitLen) {
+                    V = Utils.Integer.hmacCompute(hashfunc, K, V);
+                    T = Utils.Integer.concat(T, V);
+                }
+
+                BigInteger randNum = Utils.Integer.numberFromBytesBE(T, orderBitLen);
+
+                if (randNum >= 1 && randNum <= curve.N - 1) {
+                    randSignPoint = EcdsaMath.multiply(curve.G, randNum, curve.N, curve.A, curve.P);
+                    r = Utils.Integer.modulo(randSignPoint.x, curve.N);
+                    s = Utils.Integer.modulo(
+                        (numberMessage + r * privateKey.secret) * EcdsaMath.inv(randNum, curve.N),
+                        curve.N
+                    );
+                }
+
+                if (r.IsZero || s.IsZero) {
+                    K = Utils.Integer.hmacCompute(hashfunc, K, Utils.Integer.concat(V, new byte[] { 0x00 }));
+                    V = Utils.Integer.hmacCompute(hashfunc, K, V);
+                    r = BigInteger.Zero;
+                    s = BigInteger.Zero;
+                }
+            }
+
+            int recoveryId = (int)(randSignPoint.y & 1);
+            if (randSignPoint.y > curve.N) {
+                recoveryId += 2;
+            }
+            if (s > curve.N / 2) {
+                s = curve.N - s;
+                recoveryId ^= 1;
+            }
+
+            return new Signature(r, s, recoveryId);
         }
 
-        public static bool verify(string message, Signature signature, PublicKey publicKey) {
-            string hashMessage = sha256(message);
-            BigInteger numberMessage = Utils.BinaryAscii.numberFromHex(hashMessage);
+        public static bool verify(string message, Signature signature, PublicKey publicKey, string hashfunc = "sha256") {
             CurveFp curve = publicKey.curve;
+            byte[] byteMessage = computeHash(message, hashfunc);
+            int orderBitLen = Utils.Integer.bitLength(curve.N);
+            BigInteger numberMessage = Utils.Integer.numberFromBytesBE(byteMessage, orderBitLen);
+
             BigInteger sigR = signature.r;
             BigInteger sigS = signature.s;
 
-            if (sigR < 1 || sigR >= curve.N) {
+            if (sigR < 1 || sigR > curve.N - 1) {
                 return false;
             }
-            if (sigS < 1 || sigS >= curve.N) {
+            if (sigS < 1 || sigS > curve.N - 1) {
+                return false;
+            }
+            if (!curve.contains(publicKey.point)) {
                 return false;
             }
 
             BigInteger inv = EcdsaMath.inv(sigS, curve.N);
 
-            Point u1 = EcdsaMath.multiply(
+            Point v = EcdsaMath.multiplyAndAdd(
                 curve.G,
-                Utils.Integer.modulo((numberMessage * inv), curve.N),
-                curve.N,
-                curve.A,
-                curve.P
-            );
-            Point u2 = EcdsaMath.multiply(
+                Utils.Integer.modulo(numberMessage * inv, curve.N),
                 publicKey.point,
-                Utils.Integer.modulo((sigR * inv), curve.N),
+                Utils.Integer.modulo(sigR * inv, curve.N),
                 curve.N,
-                curve.A,
-                curve.P
-            );
-            Point v = EcdsaMath.add(
-                u1,
-                u2,
                 curve.A,
                 curve.P
             );
@@ -60,19 +107,36 @@ namespace EllipticCurve {
             return Utils.Integer.modulo(v.x, curve.N) == sigR;
         }
 
-        private static string sha256(string message) {
-            byte[] bytes;
+        private static byte[] computeHash(string message, string hashfunc) {
+            byte[] messageBytes = Encoding.UTF8.GetBytes(message);
+            return computeHashBytes(messageBytes, hashfunc);
+        }
 
-            using (SHA256 sha256Hash = SHA256.Create()) {
-                bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(message));
+        private static byte[] computeHashBytes(byte[] data, string hashfunc) {
+            switch (hashfunc.ToLower()) {
+                case "sha256": {
+                    using (SHA256 sha256 = SHA256.Create()) {
+                        return sha256.ComputeHash(data);
+                    }
+                }
+                case "sha384": {
+                    using (SHA384 sha384 = SHA384.Create()) {
+                        return sha384.ComputeHash(data);
+                    }
+                }
+                case "sha512": {
+                    using (SHA512 sha512 = SHA512.Create()) {
+                        return sha512.ComputeHash(data);
+                    }
+                }
+                case "sha1": {
+                    using (SHA1 sha1 = SHA1.Create()) {
+                        return sha1.ComputeHash(data);
+                    }
+                }
+                default:
+                    throw new ArgumentException("Unsupported hash function: " + hashfunc);
             }
-
-            StringBuilder builder = new StringBuilder();
-            for (int i = 0; i < bytes.Length; i++) {
-                builder.Append(bytes[i].ToString("x2"));
-            }
-
-            return builder.ToString();
         }
 
     }

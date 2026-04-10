@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Numerics;
 using System;
 
@@ -44,12 +44,53 @@ namespace EllipticCurve
         }
 
         public int length() {
-            return N.ToString("X").Length / 2;
+            string hex = N.ToString("X");
+            // Remove leading zero that BigInteger adds for positive numbers with high bit set
+            if (hex.Length > 1 && hex[0] == '0') {
+                hex = hex.Substring(1);
+            }
+            return (1 + hex.Length) / 2;
+        }
+
+        public BigInteger y(BigInteger x, bool isEven) {
+            BigInteger ySquared = Utils.Integer.modulo(
+                BigInteger.ModPow(x, 3, P) + A * x + B,
+                P
+            );
+            BigInteger yVal = EcdsaMath.modularSquareRoot(ySquared, P);
+            if (isEven != (yVal % 2 == 0)) {
+                yVal = P - yVal;
+            }
+            return yVal;
         }
 
     }
 
     public static class Curves {
+
+        private static Dictionary<string, CurveFp> _curvesByOid = new Dictionary<string, CurveFp>();
+
+        public static void add(CurveFp curve) {
+            string key = string.Join(",", curve.oid);
+            _curvesByOid[key] = curve;
+        }
+
+        public static CurveFp getByOid(int[] oid) {
+            string stringOid = string.Join(",", oid);
+            if (!_curvesByOid.ContainsKey(stringOid)) {
+                List<string> names = new List<string>();
+                foreach (var kvp in _curvesByOid) {
+                    names.Add(kvp.Value.name);
+                }
+                throw new ArgumentException(
+                    "Unknown curve with oid [" +
+                    string.Join(", ", oid) +
+                    "]; The following are registered: " +
+                    string.Join(", ", names)
+                );
+            }
+            return _curvesByOid[stringOid];
+        }
 
         public static CurveFp getCurveByName(string name) {
             name = name.ToLower();
@@ -57,7 +98,7 @@ namespace EllipticCurve
             if (name == "secp256k1") {
                 return secp256k1;
             }
-            if (name == "p256" | name == "prime256v1") {
+            if (name == "p256" || name == "prime256v1") {
                 return prime256v1;
             }
 
@@ -96,6 +137,10 @@ namespace EllipticCurve
             {string.Join(",", prime256v1.oid), prime256v1}
         };
 
+        static Curves() {
+            add(secp256k1);
+            add(prime256v1);
+        }
     }
 
 }
