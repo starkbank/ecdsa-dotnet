@@ -4,15 +4,14 @@ using EllipticCurve;
 
 namespace StarkbankEcdsaTests {
 
-    public class Rfc6979KnownAnswerTest {
-        // Test vectors from RFC 6979 Appendix A.2.5 (prime256v1/SHA-256).
-        // The r values match the RFC exactly; s values are low-S normalized
-        // (s = N - s when RFC s > N/2).
+    public class Prime256v1PublicKeyDerivationTest {
+        // RFC 6979 A.2.5 public key derivation. Signatures are hedged, so r/s
+        // no longer match fixed test vectors, but pubkey derivation is unchanged.
 
         private readonly PrivateKey privateKey;
         private readonly PublicKey publicKey;
 
-        public Rfc6979KnownAnswerTest() {
+        public Prime256v1PublicKeyDerivationTest() {
             privateKey = new PrivateKey(
                 Curves.prime256v1,
                 EllipticCurve.Utils.BinaryAscii.numberFromHex("C9AFA9D845BA75166B5C215767B1D6934E50C3DB36E89B127B8A622B120F6721")
@@ -33,33 +32,27 @@ namespace StarkbankEcdsaTests {
         }
 
         [Fact]
-        public void testSampleMessageSignature() {
+        public void testSampleMessageRoundTrip() {
             Signature sig = Ecdsa.sign("sample", privateKey);
-            // r matches RFC 6979 A.2.5 exactly
-            Assert.Equal(sig.r, EllipticCurve.Utils.BinaryAscii.numberFromHex("EFD48B2AACB6A8FD1140DD9CD45E81D69D2C877B56AAF991C34D0EA84EAF3716"));
-            // s is low-S normalized: N - 0xF7CB1C942D657C41D436C7A1B6E29F65F3E900DBB9AFF4064DC4AB2F843ACDA8
-            Assert.Equal(sig.s, EllipticCurve.Utils.BinaryAscii.numberFromHex("0834E36AD29A83BF2BC9385E491D6099C8FDF9D1ED67AA7EA5F51F93782857A9"));
+            Assert.True(sig.s <= Curves.prime256v1.N / 2);
             Assert.True(Ecdsa.verify("sample", sig, publicKey));
         }
 
         [Fact]
-        public void testTestMessageSignature() {
+        public void testTestMessageRoundTrip() {
             Signature sig = Ecdsa.sign("test", privateKey);
-            // r matches RFC 6979 A.2.5 exactly
-            Assert.Equal(sig.r, EllipticCurve.Utils.BinaryAscii.numberFromHex("F1ABB023518351CD71D881567B1EA663ED3EFCF6C5132B354F28D3B0B7D38367"));
-            // s already low-S, matches RFC directly
-            Assert.Equal(sig.s, EllipticCurve.Utils.BinaryAscii.numberFromHex("019F4113742A2B14BD25926B49C649155F267E60D3814B4C0CC84250E46F0083"));
+            Assert.True(sig.s <= Curves.prime256v1.N / 2);
             Assert.True(Ecdsa.verify("test", sig, publicKey));
         }
     }
 
-    public class Secp256k1KnownAnswerTest {
-        // Known-answer tests for secp256k1 with secret=1 (pubkey = generator G).
+    public class Secp256k1PublicKeyDerivationTest {
+        // secp256k1 with secret=1 (pubkey = generator G).
 
         private readonly PrivateKey privateKey;
         private readonly PublicKey publicKey;
 
-        public Secp256k1KnownAnswerTest() {
+        public Secp256k1PublicKeyDerivationTest() {
             privateKey = new PrivateKey(Curves.secp256k1, 1);
             publicKey = privateKey.publicKey();
         }
@@ -71,18 +64,14 @@ namespace StarkbankEcdsaTests {
         }
 
         [Fact]
-        public void testSampleMessageSignature() {
+        public void testSampleMessageRoundTrip() {
             Signature sig = Ecdsa.sign("sample", privateKey);
-            Assert.Equal(sig.r, EllipticCurve.Utils.BinaryAscii.numberFromHex("58DB657BCD631038BEA07B4941172F0167ACA98F12B55E3176BD1C35435D6501"));
-            Assert.Equal(sig.s, EllipticCurve.Utils.BinaryAscii.numberFromHex("3A78E73D8FF8AB554E13C10F6390D81A882F91945D6275493882676170B53A57"));
             Assert.True(Ecdsa.verify("sample", sig, publicKey));
         }
 
         [Fact]
-        public void testTestMessageSignature() {
+        public void testTestMessageRoundTrip() {
             Signature sig = Ecdsa.sign("test", privateKey);
-            Assert.Equal(sig.r, EllipticCurve.Utils.BinaryAscii.numberFromHex("98DF3AAED18D1299109E9732E3015F7E68E5D1FDEAD6924809B410D970A3B0CE"));
-            Assert.Equal(sig.s, EllipticCurve.Utils.BinaryAscii.numberFromHex("3EF15987C6592379BAAD6392586A382D63952572632FCD951AE75E7471C144C6"));
             Assert.True(Ecdsa.verify("test", sig, publicKey));
         }
     }
@@ -212,18 +201,17 @@ namespace StarkbankEcdsaTests {
         }
     }
 
-    public class Rfc6979Test {
+    public class HedgedSignatureTest {
 
         [Fact]
-        public void testDeterministicSignature() {
+        public void testSameInputsProduceDifferentSignatures() {
             PrivateKey privateKey = new PrivateKey();
             string message = "test message";
 
             Signature signature1 = Ecdsa.sign(message, privateKey);
             Signature signature2 = Ecdsa.sign(message, privateKey);
 
-            Assert.Equal(signature1.r, signature2.r);
-            Assert.Equal(signature1.s, signature2.s);
+            Assert.True(signature1.r != signature2.r || signature1.s != signature2.s);
         }
 
         [Fact]
@@ -454,15 +442,14 @@ namespace StarkbankEcdsaTests {
         }
 
         [Fact]
-        public void testSha512DeterministicSignature() {
+        public void testSha512SignaturesAreHedged() {
             PrivateKey privateKey = new PrivateKey();
             string message = "test message";
 
             Signature signature1 = Ecdsa.sign(message, privateKey, hashfunc: "sha512");
             Signature signature2 = Ecdsa.sign(message, privateKey, hashfunc: "sha512");
 
-            Assert.Equal(signature1.r, signature2.r);
-            Assert.Equal(signature1.s, signature2.s);
+            Assert.True(signature1.r != signature2.r || signature1.s != signature2.s);
         }
 
         [Fact]
@@ -491,15 +478,14 @@ namespace StarkbankEcdsaTests {
         }
 
         [Fact]
-        public void testDeterministicSignature() {
+        public void testSignaturesAreHedged() {
             PrivateKey privateKey = new PrivateKey(Curves.prime256v1);
             string message = "test message";
 
             Signature signature1 = Ecdsa.sign(message, privateKey);
             Signature signature2 = Ecdsa.sign(message, privateKey);
 
-            Assert.Equal(signature1.r, signature2.r);
-            Assert.Equal(signature1.s, signature2.s);
+            Assert.True(signature1.r != signature2.r || signature1.s != signature2.s);
         }
 
         [Fact]

@@ -19,18 +19,26 @@ namespace EllipticCurve {
             BigInteger r = BigInteger.Zero, s = BigInteger.Zero;
             Point randSignPoint = null;
 
-            // RFC 6979 HMAC-DRBG state
+            // Hedged RFC 6979 §3.6 HMAC-DRBG state: deterministic k derivation
+            // with fresh random entropy mixed into K-init. Same message + key
+            // yield different signatures, while preserving RFC 6979's protection
+            // against RNG failures.
             byte[] secretBytes = Utils.Integer.bigIntToBytes(privateKey.secret, orderByteLen);
             BigInteger hashReduced = Utils.Integer.modulo(Utils.Integer.numberFromBytesBE(byteMessage, orderBitLen), curve.N);
             byte[] hashOctets = Utils.Integer.bigIntToBytes(hashReduced, orderByteLen);
+
+            byte[] extraEntropy = new byte[orderByteLen];
+            using (var rng = RandomNumberGenerator.Create()) {
+                rng.GetBytes(extraEntropy);
+            }
 
             byte[] V = new byte[hashLen];
             for (int i = 0; i < hashLen; i++) V[i] = 0x01;
             byte[] K = new byte[hashLen];
 
-            K = Utils.Integer.hmacCompute(hashfunc, K, Utils.Integer.concat(V, new byte[] { 0x00 }, secretBytes, hashOctets));
+            K = Utils.Integer.hmacCompute(hashfunc, K, Utils.Integer.concat(V, new byte[] { 0x00 }, secretBytes, hashOctets, extraEntropy));
             V = Utils.Integer.hmacCompute(hashfunc, K, V);
-            K = Utils.Integer.hmacCompute(hashfunc, K, Utils.Integer.concat(V, new byte[] { 0x01 }, secretBytes, hashOctets));
+            K = Utils.Integer.hmacCompute(hashfunc, K, Utils.Integer.concat(V, new byte[] { 0x01 }, secretBytes, hashOctets, extraEntropy));
             V = Utils.Integer.hmacCompute(hashfunc, K, V);
 
             while (r.IsZero || s.IsZero) {

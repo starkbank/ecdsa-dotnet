@@ -34,6 +34,17 @@ namespace StarkbankEcdsaTests
             Assert.Equal(signature1.s, signature2.s);
         }
 
+        [Fact]
+        public void testUniqueness() {
+            PrivateKey privateKey = new PrivateKey();
+            string message = "This is a text message";
+
+            Signature signature1 = Ecdsa.sign(message, privateKey);
+            Signature signature2 = Ecdsa.sign(message, privateKey);
+
+            Assert.NotEqual(signature1.toBase64(), signature2.toBase64());
+        }
+
     }
 
 }

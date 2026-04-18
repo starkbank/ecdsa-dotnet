@@ -111,8 +111,11 @@ namespace EllipticCurve.Utils {
         }
 
         public static byte[] rfc6979(byte[] hashBytes, BigInteger secret, CurveFp curve, string hashfunc, int hashLen) {
-            // Generate deterministic nonce per RFC 6979
-            // Returns byte[] representing the first valid k
+            // Generate nonce values per hedged RFC 6979 §3.6: deterministic k
+            // derivation with fresh random entropy mixed into K-init. Same
+            // message and key yield different signatures, while preserving
+            // RFC 6979's protection against RNG failures.
+            // Returns byte[] representing the first valid k.
 
             int orderBitLen = bitLength(curve.N);
             int orderByteLen = (orderBitLen + 7) / 8;
@@ -122,13 +125,18 @@ namespace EllipticCurve.Utils {
             BigInteger hashReduced = modulo(numberFromBytesBE(hashBytes, orderBitLen), curve.N);
             byte[] hashOctets = bigIntToBytes(hashReduced, orderByteLen);
 
+            byte[] extraEntropy = new byte[orderByteLen];
+            using (var rng = RandomNumberGenerator.Create()) {
+                rng.GetBytes(extraEntropy);
+            }
+
             byte[] V = new byte[hashLen];
             for (int i = 0; i < hashLen; i++) V[i] = 0x01;
             byte[] K = new byte[hashLen];
 
-            K = hmacCompute(hashfunc, K, concat(V, new byte[] { 0x00 }, secretBytes, hashOctets));
+            K = hmacCompute(hashfunc, K, concat(V, new byte[] { 0x00 }, secretBytes, hashOctets, extraEntropy));
             V = hmacCompute(hashfunc, K, V);
-            K = hmacCompute(hashfunc, K, concat(V, new byte[] { 0x01 }, secretBytes, hashOctets));
+            K = hmacCompute(hashfunc, K, concat(V, new byte[] { 0x01 }, secretBytes, hashOctets, extraEntropy));
             V = hmacCompute(hashfunc, K, V);
 
             while (true) {
