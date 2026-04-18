@@ -117,7 +117,7 @@ namespace EllipticCurve.Utils {
             // RFC 6979's protection against RNG failures.
             // Returns byte[] representing the first valid k.
 
-            int orderBitLen = bitLength(curve.N);
+            int orderBitLen = curve.NBitLength;
             int orderByteLen = (orderBitLen + 7) / 8;
 
             byte[] secretBytes = bigIntToBytes(secret, orderByteLen);

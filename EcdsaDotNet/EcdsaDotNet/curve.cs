@@ -10,10 +10,16 @@ namespace EllipticCurve
         public BigInteger B { get; private set; }
         public BigInteger P { get; private set; }
         public BigInteger N { get; private set; }
+        public int NBitLength { get; private set; }
         public Point G { get; private set; }
         public string name { get; private set; }
         public int[] oid { get; private set; }
         public string nistName { get; private set; }
+
+        // Precomputed window table for fast fixed-base scalar multiplication (n*G).
+        // Lazily initialized; guarded by lock for thread-safe construction.
+        internal Point[] generatorTable;
+        internal readonly object generatorTableLock = new object();
 
 
         public CurveFp(BigInteger A, BigInteger B, BigInteger P, BigInteger N, BigInteger Gx, BigInteger Gy, string name, int[] oid, string nistName = "") {
@@ -21,6 +27,7 @@ namespace EllipticCurve
             this.B = B;
             this.P = P;
             this.N = N;
+            this.NBitLength = Utils.Integer.bitLength(N);
             G = new Point(Gx, Gy);
             this.name = name;
             this.nistName = nistName;

@@ -10,7 +10,7 @@ namespace EllipticCurve {
         public static Signature sign(string message, PrivateKey privateKey, string hashfunc = "sha256") {
             CurveFp curve = privateKey.curve;
             byte[] byteMessage = computeHash(message, hashfunc);
-            int orderBitLen = Utils.Integer.bitLength(curve.N);
+            int orderBitLen = curve.NBitLength;
             BigInteger numberMessage = Utils.Integer.numberFromBytesBE(byteMessage, orderBitLen);
 
             int hashLen = byteMessage.Length;
@@ -51,7 +51,7 @@ namespace EllipticCurve {
                 BigInteger randNum = Utils.Integer.numberFromBytesBE(T, orderBitLen);
 
                 if (randNum >= 1 && randNum <= curve.N - 1) {
-                    randSignPoint = EcdsaMath.multiply(curve.G, randNum, curve.N, curve.A, curve.P);
+                    randSignPoint = EcdsaMath.multiplyGenerator(curve, randNum);
                     r = Utils.Integer.modulo(randSignPoint.x, curve.N);
                     s = Utils.Integer.modulo(
                         (numberMessage + r * privateKey.secret) * EcdsaMath.inv(randNum, curve.N),
@@ -82,7 +82,7 @@ namespace EllipticCurve {
         public static bool verify(string message, Signature signature, PublicKey publicKey, string hashfunc = "sha256") {
             CurveFp curve = publicKey.curve;
             byte[] byteMessage = computeHash(message, hashfunc);
-            int orderBitLen = Utils.Integer.bitLength(curve.N);
+            int orderBitLen = curve.NBitLength;
             BigInteger numberMessage = Utils.Integer.numberFromBytesBE(byteMessage, orderBitLen);
 
             BigInteger sigR = signature.r;
