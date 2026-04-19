@@ -343,8 +343,10 @@ namespace EllipticCurve {
         }
 
         private static Point shamirMultiply(Point jp1, BigInteger n1, Point jp2, BigInteger n2, BigInteger N, BigInteger A, BigInteger P) {
-            // Compute n1*p1 + n2*p2 using Shamir's trick (simultaneous double-and-add).
-            // Not constant-time -- use only with public scalars (e.g. verification).
+            // Compute n1*p1 + n2*p2 using Shamir's trick with Joint Sparse Form
+            // (Solinas 2001). JSF picks signed digits in {-1, 0, 1} so at most
+            // ~l/2 digit pairs are non-zero, versus ~3l/4 for raw binary. Not
+            // constant-time -- use only with public scalars (e.g. verification).
 
             if (n1 < 0 || n1 >= N) {
                 n1 = Utils.Integer.modulo(n1, N);
@@ -353,25 +355,85 @@ namespace EllipticCurve {
                 n2 = Utils.Integer.modulo(n2, N);
             }
 
+            if (n1.IsZero && n2.IsZero) {
+                return new Point(BigInteger.Zero, BigInteger.Zero, BigInteger.One);
+            }
+
             Point jp1p2 = jacobianAdd(jp1, jp2, A, P);
+            Point negJp2 = neg(jp2, P);
+            Point jp1mp2 = jacobianAdd(jp1, negJp2, A, P);
 
-            int l1 = Utils.Integer.bitLength(n1);
-            int l2 = Utils.Integer.bitLength(n2);
-            int l = l1 > l2 ? l1 : l2;
+            // addTable indexed by (u0+1)*3 + (u1+1) where u0, u1 in {-1, 0, 1}.
+            // Index 4 (u0=0, u1=0) is unused (no add for all-zero digit).
+            Point[] addTable = new Point[9];
+            addTable[(1 + 1) * 3 + (0 + 1)] = jp1;             // (1, 0)
+            addTable[(-1 + 1) * 3 + (0 + 1)] = neg(jp1, P);    // (-1, 0)
+            addTable[(0 + 1) * 3 + (1 + 1)] = jp2;             // (0, 1)
+            addTable[(0 + 1) * 3 + (-1 + 1)] = negJp2;         // (0, -1)
+            addTable[(1 + 1) * 3 + (1 + 1)] = jp1p2;           // (1, 1)
+            addTable[(-1 + 1) * 3 + (-1 + 1)] = neg(jp1p2, P); // (-1, -1)
+            addTable[(1 + 1) * 3 + (-1 + 1)] = jp1mp2;         // (1, -1)
+            addTable[(-1 + 1) * 3 + (1 + 1)] = neg(jp1mp2, P); // (-1, 1)
+
+            int[][] digits = jsfDigits(n1, n2);
             Point r = new Point(BigInteger.Zero, BigInteger.Zero, BigInteger.One);
-
-            for (int i = l - 1; i >= 0; i--) {
+            for (int k = 0; k < digits.Length; k++) {
                 r = jacobianDouble(r, A, P);
-                int b1 = (int)((n1 >> i) & 1);
-                int b2 = (int)((n2 >> i) & 1);
-                if (b1 != 0) {
-                    r = jacobianAdd(r, b2 != 0 ? jp1p2 : jp1, A, P);
-                } else if (b2 != 0) {
-                    r = jacobianAdd(r, jp2, A, P);
+                int u0 = digits[k][0];
+                int u1 = digits[k][1];
+                if (u0 != 0 || u1 != 0) {
+                    r = jacobianAdd(r, addTable[(u0 + 1) * 3 + (u1 + 1)], A, P);
                 }
             }
 
             return r;
+        }
+
+        private static Point neg(Point p, BigInteger P) {
+            return new Point(p.x, p.y.IsZero ? BigInteger.Zero : P - p.y, p.z);
+        }
+
+        private static int[][] jsfDigits(BigInteger k0, BigInteger k1) {
+            // Joint Sparse Form of (k0, k1): list of signed-digit pairs
+            // (u0, u1) in {-1, 0, 1}, ordered MSB-first. At most one of any
+            // two consecutive pairs is non-zero, giving density ~1/2 instead
+            // of ~3/4 from raw binary.
+            System.Collections.Generic.List<int[]> digits = new System.Collections.Generic.List<int[]>();
+            int d0 = 0;
+            int d1 = 0;
+            while (!(k0 + d0).IsZero || !(k1 + d1).IsZero) {
+                int a0 = (int)((k0 + d0) & 7);
+                int a1 = (int)((k1 + d1) & 7);
+                int u0;
+                if ((a0 & 1) != 0) {
+                    u0 = ((a0 & 3) == 1) ? 1 : -1;
+                    if ((a0 == 3 || a0 == 5) && (a1 & 3) == 2) {
+                        u0 = -u0;
+                    }
+                } else {
+                    u0 = 0;
+                }
+                int u1;
+                if ((a1 & 1) != 0) {
+                    u1 = ((a1 & 3) == 1) ? 1 : -1;
+                    if ((a1 == 3 || a1 == 5) && (a0 & 3) == 2) {
+                        u1 = -u1;
+                    }
+                } else {
+                    u1 = 0;
+                }
+                digits.Add(new int[] { u0, u1 });
+                if (2 * d0 == 1 + u0) {
+                    d0 = 1 - d0;
+                }
+                if (2 * d1 == 1 + u1) {
+                    d1 = 1 - d1;
+                }
+                k0 >>= 1;
+                k1 >>= 1;
+            }
+            digits.Reverse();
+            return digits.ToArray();
         }
 
     }
