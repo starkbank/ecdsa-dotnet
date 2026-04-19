@@ -105,9 +105,7 @@ namespace EllipticCurve {
                 Utils.Integer.modulo(numberMessage * inv, curve.N),
                 publicKey.point,
                 Utils.Integer.modulo(sigR * inv, curve.N),
-                curve.N,
-                curve.A,
-                curve.P
+                curve
             );
             if (v.isAtInfinity()) {
                 return false;

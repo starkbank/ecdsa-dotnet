@@ -181,6 +181,102 @@ namespace EllipticCurve {
             );
         }
 
+        public static Point multiplyAndAdd(Point p1, BigInteger n1, Point p2, BigInteger n2, CurveFp curve) {
+            // Compute n1*p1 + n2*p2. If the curve exposes glvParams (e.g.
+            // secp256k1), uses the GLV endomorphism to split both scalars into
+            // ~128-bit halves and run a 4-scalar simultaneous multi-exponentiation.
+            // Otherwise falls back to Shamir's trick with JSF. Not constant-time --
+            // use only with public scalars (e.g. verification).
+
+            if (curve.glvParams != null) {
+                return glvMultiplyAndAdd(p1, n1, p2, n2, curve);
+            }
+            return fromJacobian(
+                shamirMultiply(
+                    toJacobian(p1), n1,
+                    toJacobian(p2), n2,
+                    curve.N, curve.A, curve.P
+                ),
+                curve.P
+            );
+        }
+
+        private static Point glvMultiplyAndAdd(Point p1, BigInteger n1, Point p2, BigInteger n2, CurveFp curve) {
+            // Compute n1*p1 + n2*p2 using the GLV endomorphism. Splits each
+            // 256-bit scalar into two ~128-bit scalars via k = k1 + k2*lambda
+            // (mod N), then runs a 4-scalar simultaneous double-and-add over
+            // (p1, phi(p1), p2, phi(p2)) with a 16-entry precomputed table of
+            // subset sums. Halves the loop length versus the plain Shamir path.
+            GLVParams glv = curve.glvParams;
+            BigInteger N = curve.N;
+            BigInteger A = curve.A;
+            BigInteger P = curve.P;
+            BigInteger beta = glv.beta;
+
+            BigInteger[] k1k2 = glvDecompose(Utils.Integer.modulo(n1, N), glv, N);
+            BigInteger[] k3k4 = glvDecompose(Utils.Integer.modulo(n2, N), glv, N);
+
+            // Base points (affine, z=1) -- phi((x,y)) = (beta*x mod P, y).
+            Point[] bases = new Point[] {
+                new Point(p1.x, p1.y, BigInteger.One),
+                new Point(Utils.Integer.modulo(beta * p1.x, P), p1.y, BigInteger.One),
+                new Point(p2.x, p2.y, BigInteger.One),
+                new Point(Utils.Integer.modulo(beta * p2.x, P), p2.y, BigInteger.One),
+            };
+            BigInteger[] scalars = new BigInteger[] { k1k2[0], k1k2[1], k3k4[0], k3k4[1] };
+            for (int i = 0; i < 4; i++) {
+                if (scalars[i].Sign < 0) {
+                    scalars[i] = -scalars[i];
+                    bases[i] = new Point(bases[i].x, P - bases[i].y, BigInteger.One);
+                }
+            }
+
+            // Precompute table[idx] = sum of bases[i] selected by bits of idx.
+            Point[] table = new Point[16];
+            Point infinity = new Point(BigInteger.Zero, BigInteger.Zero, BigInteger.One);
+            table[0] = infinity;
+            for (int idx = 1; idx < 16; idx++) {
+                int low = idx & -idx;
+                int i = 0;
+                int tmp = low;
+                while ((tmp & 1) == 0) { tmp >>= 1; i++; }
+                table[idx] = jacobianAdd(table[idx ^ low], bases[i], A, P);
+            }
+
+            int maxLen = 0;
+            for (int i = 0; i < 4; i++) {
+                int bl = Utils.Integer.bitLength(scalars[i]);
+                if (bl > maxLen) maxLen = bl;
+            }
+
+            Point r = infinity;
+            BigInteger s0 = scalars[0], s1 = scalars[1], s2 = scalars[2], s3 = scalars[3];
+            for (int bit = maxLen - 1; bit >= 0; bit--) {
+                r = jacobianDouble(r, A, P);
+                int idx = (int)((s0 >> bit) & 1)
+                        | ((int)((s1 >> bit) & 1) << 1)
+                        | ((int)((s2 >> bit) & 1) << 2)
+                        | ((int)((s3 >> bit) & 1) << 3);
+                if (idx != 0) {
+                    r = jacobianAdd(r, table[idx], A, P);
+                }
+            }
+            return fromJacobian(r, P);
+        }
+
+        private static BigInteger[] glvDecompose(BigInteger k, GLVParams glv, BigInteger N) {
+            // Decompose k into (k1, k2) with k = k1 + k2*lambda (mod N) and
+            // |k1|, |k2| ~ sqrt(N). Babai rounding against the precomputed
+            // basis {(a1, b1), (a2, b2)}; k1 and k2 may be negative.
+            BigInteger a1 = glv.a1, b1 = glv.b1, a2 = glv.a2, b2 = glv.b2;
+            BigInteger halfN = N / 2;
+            BigInteger c1 = (b2 * k + halfN) / N;
+            BigInteger c2 = (-b1 * k + halfN) / N;
+            BigInteger k1 = k - c1 * a1 - c2 * a2;
+            BigInteger k2 = -c1 * b1 - c2 * b2;
+            return new BigInteger[] { k1, k2 };
+        }
+
         public static BigInteger inv(BigInteger x, BigInteger n) {
             // Modular inverse via extended Euclidean algorithm. Roughly 2-3x
             // faster than Fermat's little theorem (ModPow with exponent n-2)
