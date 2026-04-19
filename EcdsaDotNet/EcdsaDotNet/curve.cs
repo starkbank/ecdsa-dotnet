@@ -16,10 +16,12 @@ namespace EllipticCurve
         public int[] oid { get; private set; }
         public string nistName { get; private set; }
 
-        // Precomputed window table for fast fixed-base scalar multiplication (n*G).
-        // Lazily initialized; guarded by lock for thread-safe construction.
-        internal Point[] generatorTable;
-        internal readonly object generatorTableLock = new object();
+        // Precomputed table of powers-of-two multiples of G in affine form
+        // ([G, 2G, 4G, ..., 2^NBitLength·G]) for fast fixed-base scalar
+        // multiplication (n*G) using width-2 NAF. Lazily initialized;
+        // guarded by lock for thread-safe construction.
+        internal Point[] generatorPowersTable;
+        internal readonly object generatorPowersTableLock = new object();
 
 
         public CurveFp(BigInteger A, BigInteger B, BigInteger P, BigInteger N, BigInteger Gx, BigInteger Gy, string name, int[] oid, string nistName = "") {
