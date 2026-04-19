@@ -258,12 +258,20 @@ namespace EllipticCurve {
             BigInteger px = p.x, py = p.y, pz = p.z;
             BigInteger qx = q.x, qy = q.y, qz = q.z;
 
-            BigInteger qz2 = Utils.Integer.modulo(qz * qz, P);
             BigInteger pz2 = Utils.Integer.modulo(pz * pz, P);
-            BigInteger U1 = Utils.Integer.modulo(px * qz2, P);
             BigInteger U2 = Utils.Integer.modulo(qx * pz2, P);
-            BigInteger S1 = Utils.Integer.modulo(py * qz2 * qz, P);
             BigInteger S2 = Utils.Integer.modulo(qy * pz2 * pz, P);
+
+            BigInteger U1, S1;
+            if (qz.IsOne) {
+                // Mixed affine+Jacobian add: qz²=qz³=1 saves four multiplications.
+                U1 = px;
+                S1 = py;
+            } else {
+                BigInteger qz2 = Utils.Integer.modulo(qz * qz, P);
+                U1 = Utils.Integer.modulo(px * qz2, P);
+                S1 = Utils.Integer.modulo(py * qz2 * qz, P);
+            }
 
             if (U1 == U2) {
                 if (S1 != S2) {
@@ -279,7 +287,7 @@ namespace EllipticCurve {
             BigInteger U1H2 = Utils.Integer.modulo(U1 * H2, P);
             BigInteger nx = Utils.Integer.modulo(R * R - H3 - 2 * U1H2, P);
             BigInteger ny = Utils.Integer.modulo(R * (U1H2 - nx) - S1 * H3, P);
-            BigInteger nz = Utils.Integer.modulo(H * pz * qz, P);
+            BigInteger nz = qz.IsOne ? Utils.Integer.modulo(H * pz, P) : Utils.Integer.modulo(H * pz * qz, P);
 
             return new Point(nx, ny, nz);
         }
