@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Numerics;
 using System.Security.Cryptography;
 
@@ -7,12 +7,35 @@ namespace EllipticCurve.Utils {
     public static class Integer {
         public static BigInteger modulo(BigInteger dividend, BigInteger divisor) {
             BigInteger remainder = BigInteger.Remainder(dividend, divisor);
-            
+
             if (remainder < 0) {
                 return remainder + divisor;
             }
 
             return remainder;
+        }
+
+        public static int bitLength(BigInteger value) {
+            if (value < 0) {
+                value = -value;
+            }
+            if (value.IsZero) {
+                return 0;
+            }
+            byte[] bytes = value.ToByteArray();
+            int byteCount = bytes.Length;
+            byte highByte = bytes[byteCount - 1];
+            // The last byte may be a sign byte (0x00) for positive numbers
+            if (highByte == 0 && byteCount > 1) {
+                byteCount--;
+                highByte = bytes[byteCount - 1];
+            }
+            int bits = (byteCount - 1) * 8;
+            while (highByte > 0) {
+                bits++;
+                highByte >>= 1;
+            }
+            return bits;
         }
 
         public static BigInteger randomBetween(BigInteger minimum, BigInteger maximum) {
@@ -85,6 +108,106 @@ namespace EllipticCurve.Utils {
 
             return Tuple.Create(bytesNeeded, mask);
 
+        }
+
+        public static byte[] rfc6979(byte[] hashBytes, BigInteger secret, CurveFp curve, string hashfunc, int hashLen) {
+            // Generate nonce values per hedged RFC 6979 §3.6: deterministic k
+            // derivation with fresh random entropy mixed into K-init. Same
+            // message and key yield different signatures, while preserving
+            // RFC 6979's protection against RNG failures.
+            // Returns byte[] representing the first valid k.
+
+            int orderBitLen = curve.NBitLength;
+            int orderByteLen = (orderBitLen + 7) / 8;
+
+            byte[] secretBytes = bigIntToBytes(secret, orderByteLen);
+
+            BigInteger hashReduced = modulo(numberFromBytesBE(hashBytes, orderBitLen), curve.N);
+            byte[] hashOctets = bigIntToBytes(hashReduced, orderByteLen);
+
+            byte[] extraEntropy = new byte[orderByteLen];
+            using (var rng = RandomNumberGenerator.Create()) {
+                rng.GetBytes(extraEntropy);
+            }
+
+            byte[] V = new byte[hashLen];
+            for (int i = 0; i < hashLen; i++) V[i] = 0x01;
+            byte[] K = new byte[hashLen];
+
+            K = hmacCompute(hashfunc, K, concat(V, new byte[] { 0x00 }, secretBytes, hashOctets, extraEntropy));
+            V = hmacCompute(hashfunc, K, V);
+            K = hmacCompute(hashfunc, K, concat(V, new byte[] { 0x01 }, secretBytes, hashOctets, extraEntropy));
+            V = hmacCompute(hashfunc, K, V);
+
+            while (true) {
+                byte[] T = new byte[0];
+                while (T.Length * 8 < orderBitLen) {
+                    V = hmacCompute(hashfunc, K, V);
+                    T = concat(T, V);
+                }
+
+                BigInteger k = numberFromBytesBE(T, orderBitLen);
+
+                if (k >= 1 && k <= curve.N - 1) {
+                    return bigIntToBytes(k, orderByteLen);
+                }
+
+                K = hmacCompute(hashfunc, K, concat(V, new byte[] { 0x00 }));
+                V = hmacCompute(hashfunc, K, V);
+            }
+        }
+
+        public static BigInteger numberFromBytesBE(byte[] bytes, int bitLength) {
+            // Convert big-endian bytes to BigInteger with hash truncation
+            string hex = BinaryAscii.hexFromBinary(bytes);
+            BigInteger number = BinaryAscii.numberFromHex(hex);
+            int hashBitLen = bytes.Length * 8;
+            if (hashBitLen > bitLength) {
+                number >>= (hashBitLen - bitLength);
+            }
+            return number;
+        }
+
+        public static byte[] bigIntToBytes(BigInteger value, int length) {
+            string hex = BinaryAscii.hexFromNumber(value, length);
+            return BinaryAscii.binaryFromHex(hex);
+        }
+
+        public static byte[] hmacCompute(string hashfunc, byte[] key, byte[] data) {
+            HMAC hmacAlg = null;
+            switch (hashfunc.ToLower()) {
+                case "sha256":
+                    hmacAlg = new HMACSHA256(key);
+                    break;
+                case "sha384":
+                    hmacAlg = new HMACSHA384(key);
+                    break;
+                case "sha512":
+                    hmacAlg = new HMACSHA512(key);
+                    break;
+                case "sha1":
+                    hmacAlg = new HMACSHA1(key);
+                    break;
+                default:
+                    throw new ArgumentException("Unsupported hash function: " + hashfunc);
+            }
+            using (hmacAlg) {
+                return hmacAlg.ComputeHash(data);
+            }
+        }
+
+        internal static byte[] concat(params byte[][] arrays) {
+            int totalLength = 0;
+            foreach (byte[] arr in arrays) {
+                totalLength += arr.Length;
+            }
+            byte[] result = new byte[totalLength];
+            int offset = 0;
+            foreach (byte[] arr in arrays) {
+                Array.Copy(arr, 0, result, offset, arr.Length);
+                offset += arr.Length;
+            }
+            return result;
         }
 
     }

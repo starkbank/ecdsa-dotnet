@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Numerics;
 using System;
 
@@ -15,6 +15,15 @@ namespace EllipticCurve {
 
             if (secret == null) {
                 secret = Utils.Integer.randomBetween(1, this.curve.N - 1);
+            }
+            this.secret = (BigInteger)secret;
+        }
+
+        public PrivateKey(CurveFp curve, BigInteger? secret=null) {
+            this.curve = curve;
+
+            if (secret == null) {
+                secret = Utils.Integer.randomBetween(1, curve.N - 1);
             }
             this.secret = (BigInteger)secret;
         }
@@ -85,25 +94,28 @@ namespace EllipticCurve {
                 );
             }
 
+            CurveFp curve;
             string stringOid = string.Join(",", oidCurve);
-
-            if (!Curves.curvesByOid.ContainsKey(stringOid))
-            {
-                int numCurves = Curves.supportedCurves.Length;
-                string[] supportedCurves = new string[numCurves];
-                for (int i = 0; i < numCurves; i++)
-                {
-                    supportedCurves[i] = Curves.supportedCurves[i].name;
+            if (Curves.curvesByOid.ContainsKey(stringOid)) {
+                curve = Curves.curvesByOid[stringOid];
+            } else {
+                try {
+                    curve = Curves.getByOid(oidCurve);
+                } catch {
+                    int numCurves = Curves.supportedCurves.Length;
+                    string[] supportedCurves = new string[numCurves];
+                    for (int i = 0; i < numCurves; i++)
+                    {
+                        supportedCurves[i] = Curves.supportedCurves[i].name;
+                    }
+                    throw new ArgumentException(
+                        "Unknown curve with oid [" +
+                        string.Join(", ", oidCurve) +
+                        "]; The following are registered: " +
+                        string.Join(", ", supportedCurves)
+                    );
                 }
-                throw new ArgumentException(
-                    "Unknown curve with oid [" +
-                    string.Join(", ", oidCurve) +
-                    "]. Only the following are available: " +
-                    string.Join(", ", supportedCurves)
-                );
             }
-
-            CurveFp curve = Curves.curvesByOid[stringOid];
 
             if (privateKeyStr.Length < curve.length()) {
                 int length = curve.length() - privateKeyStr.Length;
@@ -114,11 +126,15 @@ namespace EllipticCurve {
                     privateKeyStr = Utils.Der.combineByteArrays(new List<byte[]> { Utils.BinaryAscii.binaryFromHex(padding), privateKeyStr });
             }
 
-            return fromString(privateKeyStr, curve.name);
+            return fromString(privateKeyStr, curve);
 
         }
 
         public static PrivateKey fromString (byte[] str, string curve="secp256k1") {
+            return new PrivateKey(curve, Utils.BinaryAscii.numberFromString(str));
+        }
+
+        public static PrivateKey fromString (byte[] str, CurveFp curve) {
             return new PrivateKey(curve, Utils.BinaryAscii.numberFromString(str));
         }
     }

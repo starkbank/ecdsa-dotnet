@@ -1,49 +1,60 @@
-## A lightweight and fast ECDSA implementation
+## A lightweight and fast pure C# ECDSA
 
 ### Overview
 
-This is a pure C# implementation of the Elliptic Curve Digital Signature Algorithm. It is compatible with .NET Standard 1.3, 2.0 & 2.1. It is also compatible with OpenSSL. It uses some elegant math such as Jacobian Coordinates to speed up the ECDSA on pure C#.
+This is a pure C# implementation of the Elliptic Curve Digital Signature Algorithm. It is compatible with OpenSSL and uses elegant math such as Jacobian Coordinates to speed up the ECDSA on pure C#.
+
+### Security
+
+starkbank-ecdsa includes the following security features:
+
+- **RFC 6979 deterministic nonces**: Eliminates the catastrophic risk of nonce reuse that leaks private keys
+- **Low-S signature normalization**: Prevents signature malleability (BIP-62)
+- **Public key on-curve validation**: Blocks invalid-curve attacks during verification
+- **Montgomery ladder scalar multiplication**: Constant-operation point multiplication to mitigate timing side channels
+- **Hash truncation**: Correctly handles hash functions larger than the curve order (e.g. SHA-512 with secp256k1)
 
 ### Installation
 
-To install StarkBank`s ECDSA-DotNet, get the package on nugget.
+To install StarkBank's ECDSA-DotNet, run:
+
+```sh
+dotnet add package starkbank-ecdsa
+```
 
 ### Curves
 
-We currently support `secp256k1`, but it's super easy to add more curves to the project. Just add them on `curve.cs`
+We currently support `secp256k1` and `prime256v1` (P-256), but you can add more curves to the project. You just need to use the `Curves.add()` function.
 
 ### Speed
 
-We ran a test on Node 13.1.0 on a MAC Pro i5 2019. The libraries ran 100 times and showed the average times displayed bellow:
+We ran a test on .NET 10.0 on a MAC Pro. The libraries were run 100 times and the averages displayed below were obtained:
 
 | Library            | sign          | verify  |
 | ------------------ |:-------------:| -------:|
-| starkbank-ecdsa    |     3.5ms     |  6.5ms  |
-| nethereum          |     8.5ms     |  2.5ms  |
+| starkbank-ecdsa    |     0.9ms     |  2.9ms  |
 
-
+Performance is driven by Jacobian coordinates, a branch-balanced Montgomery ladder for variable-base scalar multiplication, a precomputed affine table of powers-of-two multiples of the generator (`[G, 2G, 4G, ..., 2^n*G]`) combined with a width-2 NAF of the scalar to eliminate doublings during signing, a mixed affine+Jacobian addition fast path, curve-specific shortcuts in point doubling (A=0 for secp256k1, A=-3 for prime256v1), the secp256k1 GLV endomorphism to split 256-bit scalars into two ~128-bit halves for a 4-scalar simultaneous multi-exponentiation during verification, Shamir's trick with Joint Sparse Form as the fallback path for curves without an efficient endomorphism, and the extended Euclidean algorithm for modular inversion.
 
 ### Sample Code
 
 How to sign a json message for [Stark Bank]:
 
-```cs
-using System;
+```csharp
 using EllipticCurve;
-
 
 // Generate privateKey from PEM string
 PrivateKey privateKey = PrivateKey.fromPem("-----BEGIN EC PARAMETERS-----\nBgUrgQQACg==\n-----END EC PARAMETERS-----\n-----BEGIN EC PRIVATE KEY-----\nMHQCAQEEIODvZuS34wFbt0X53+P5EnSj6tMjfVK01dD1dgDH02RzoAcGBSuBBAAK\noUQDQgAE/nvHu/SQQaos9TUljQsUuKI15Zr5SabPrbwtbfT/408rkVVzq8vAisbB\nRmpeRREXj5aog/Mq8RrdYy75W9q/Ig==\n-----END EC PRIVATE KEY-----\n");
 
 // Create message from json
-string message = "{\n    \"transfers\": [\n        {\n            \"amount\": 100000000,\n            \"taxId\": \"594.739.480-42\",\n            \"name\": \"Daenerys Targaryen Stormborn\",\n            \"bankCode\": \"341\",\n            \"branchCode\": \"2201\",\n            \"accountNumber\": \"76543-8\",\n            \"tags\": [\"daenerys\", \"targaryen\", \"transfer-1-external-id\"]\n        }\n    ]\n}";
+string message = "{\"transfers\":[{\"amount\":100000000}]}";
 
 Signature signature = Ecdsa.sign(message, privateKey);
 
-// Generate Signature in base64. This result can be sent to Stark Bank in header as Digital-Signature parameter
+// Generate Signature in base64. This result can be sent to Stark Bank in the request header as the Digital-Signature parameter.
 Console.WriteLine(signature.toBase64());
 
-// To double check if message matches the signature
+// To double check if the message matches the signature, do this:
 PublicKey publicKey = privateKey.publicKey();
 
 Console.WriteLine(Ecdsa.verify(message, signature, publicKey));
@@ -51,10 +62,8 @@ Console.WriteLine(Ecdsa.verify(message, signature, publicKey));
 
 Simple use:
 
-```cs
-using System;
+```csharp
 using EllipticCurve;
-
 
 // Generate new Keys
 PrivateKey privateKey = new PrivateKey();
@@ -65,8 +74,50 @@ string message = "My test message";
 // Generate Signature
 Signature signature = Ecdsa.sign(message, privateKey);
 
-// Verify if signature is valid
+// To verify if the signature is valid
 Console.WriteLine(Ecdsa.verify(message, signature, publicKey));
+```
+
+How to add more curves:
+
+```csharp
+using EllipticCurve;
+
+CurveFp newCurve = new CurveFp(
+    EllipticCurve.Utils.BinaryAscii.numberFromHex("f1fd178c0b3ad58f10126de8ce42435b3961adbcabc8ca6de8fcf353d86e9c00"),
+    EllipticCurve.Utils.BinaryAscii.numberFromHex("ee353fca5428a9300d4aba754a44c00fdfec0c9ae4b1a1803075ed967b7bb73f"),
+    EllipticCurve.Utils.BinaryAscii.numberFromHex("f1fd178c0b3ad58f10126de8ce42435b3961adbcabc8ca6de8fcf353d86e9c03"),
+    EllipticCurve.Utils.BinaryAscii.numberFromHex("f1fd178c0b3ad58f10126de8ce42435b53dc67e140d2bf941ffdd459c6d655e1"),
+    EllipticCurve.Utils.BinaryAscii.numberFromHex("b6b3d4c356c139eb31183d4749d423958c27d2dcaf98b70164c97a2dd98f5cff"),
+    EllipticCurve.Utils.BinaryAscii.numberFromHex("6142e0f7c8b204911f9271f0f3ecef8c2701c307e8e4c9e183115a1554062cfb"),
+    "frp256v1",
+    new int[] { 1, 2, 250, 1, 223, 101, 256, 1 }
+);
+
+Curves.add(newCurve);
+```
+
+How to generate compressed public key:
+
+```csharp
+using EllipticCurve;
+
+PrivateKey privateKey = new PrivateKey();
+PublicKey publicKey = privateKey.publicKey();
+string compressedPublicKey = publicKey.toCompressed();
+
+Console.WriteLine(compressedPublicKey);
+```
+
+How to recover a compressed public key:
+
+```csharp
+using EllipticCurve;
+
+string compressedPublicKey = "0252972572d465d016d4c501887b8df303eee3ed602c056b1eb09260dfa0da0ab2";
+PublicKey publicKey = PublicKey.fromCompressed(compressedPublicKey);
+
+Console.WriteLine(publicKey.toPem());
 ```
 
 ### OpenSSL
@@ -84,12 +135,10 @@ Create a message.txt file and sign it:
 openssl dgst -sha256 -sign privateKey.pem -out signatureDer.txt message.txt
 ```
 
-It's time to verify:
+To verify, do this:
 
-```cs
-using System;
+```csharp
 using EllipticCurve;
-
 
 string publicKeyPem = EllipticCurve.Utils.File.read("publicKey.pem");
 byte[] signatureDer = EllipticCurve.Utils.File.readBytes("signatureDer.txt");
@@ -107,18 +156,16 @@ You can also verify it on terminal:
 openssl dgst -sha256 -verify publicKey.pem -signature signatureDer.txt message.txt
 ```
 
-NOTE: If you want to create a Digital Signature to use in the [Stark Bank], you need to convert the binary signature to base64.
+NOTE: If you want to create a Digital Signature to use with [Stark Bank], you need to convert the binary signature to base64.
 
 ```
 openssl base64 -in signatureDer.txt -out signatureBase64.txt
 ```
 
-With this library, you can do it:
+You can do the same with this library:
 
-```cs
-using System;
+```csharp
 using EllipticCurve;
-
 
 byte[] signatureDer = EllipticCurve.Utils.File.readBytes("signatureDer.txt");
 
@@ -129,5 +176,14 @@ Console.WriteLine(signature.toBase64());
 
 [Stark Bank]: https://starkbank.com
 
-### Run all unit tests
-Run StarkbankEcdsaTests on XUnit in Visual Studio
+### Run unit tests
+
+```sh
+dotnet test EcdsaDotNet/StarkbankEcdsaTests/StarkbankEcdsaTests.csproj
+```
+
+### Run benchmark
+
+```sh
+dotnet run --project Benchmark/Benchmark.csproj -c Release
+```

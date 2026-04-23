@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
+using System.Numerics;
 using System;
 
 
@@ -9,6 +10,9 @@ namespace EllipticCurve {
         public Point point { get; }
 
         public CurveFp curve { get; private set; }
+
+        private static readonly string _evenTag = "02";
+        private static readonly string _oddTag = "03";
 
         public PublicKey(Point point, CurveFp curve) {
             this.point = point;
@@ -22,7 +26,7 @@ namespace EllipticCurve {
             if (encoded) {
                 return Utils.Der.combineByteArrays(new List<byte[]> {
                     Utils.BinaryAscii.binaryFromHex("00"),
-                    Utils.BinaryAscii.binaryFromHex("04"), 
+                    Utils.BinaryAscii.binaryFromHex("04"),
                     xString,
                     yString
                 });
@@ -31,6 +35,13 @@ namespace EllipticCurve {
                 xString,
                 yString
             });
+        }
+
+        public string toCompressed() {
+            int baseLength = 2 * curve.length();
+            string parityTag = (point.y % 2 == 0) ? _evenTag : _oddTag;
+            string xHex = Utils.BinaryAscii.hexFromNumber(point.x, curve.length()).ToLower();
+            return parityTag + xHex;
         }
 
         public byte[] toDer() {
@@ -86,23 +97,27 @@ namespace EllipticCurve {
                 );
             }
 
+            CurveFp curve;
             string stringOid = string.Join(",", oidCurve);
-
-            if (!Curves.curvesByOid.ContainsKey(stringOid)) {
-                int numCurves = Curves.supportedCurves.Length;
-                string[] supportedCurves = new string[numCurves];
-                for (int i=0; i < numCurves; i++) {
-                    supportedCurves[i] = Curves.supportedCurves[i].name;
+            if (Curves.curvesByOid.ContainsKey(stringOid)) {
+                curve = Curves.curvesByOid[stringOid];
+            } else {
+                try {
+                    curve = Curves.getByOid(oidCurve);
+                } catch {
+                    int numCurves = Curves.supportedCurves.Length;
+                    string[] supportedCurves = new string[numCurves];
+                    for (int i=0; i < numCurves; i++) {
+                        supportedCurves[i] = Curves.supportedCurves[i].name;
+                    }
+                    throw new ArgumentException(
+                        "Unknown curve with oid [" +
+                        string.Join(", ", oidCurve) +
+                        "]; The following are registered: " +
+                        string.Join(", ", supportedCurves)
+                    );
                 }
-                throw new ArgumentException(
-                    "Unknown curve with oid [" +
-                    string.Join(", ", oidCurve) +
-                    "]. Only the following are available: " +
-                    string.Join(", ", supportedCurves)
-                );
             }
-
-            CurveFp curve = Curves.curvesByOid[stringOid];
 
             Tuple<byte[], byte[]> removeBitString = Utils.Der.removeBitString(pointBitString);
             byte[] pointString = removeBitString.Item1;
@@ -111,13 +126,16 @@ namespace EllipticCurve {
                 throw new ArgumentException("trailing junk after public key point-string");
             }
 
-            return fromString(Utils.Bytes.sliceByteArray(pointString, 2), curve.name);
+            return fromString(Utils.Bytes.sliceByteArray(pointString, 2), curve);
 
         }
 
         public static PublicKey fromString(byte[] str, string curve="secp256k1", bool validatePoint=true) {
             CurveFp curveObject = Curves.getCurveByName(curve);
+            return fromString(str, curveObject, validatePoint);
+        }
 
+        public static PublicKey fromString(byte[] str, CurveFp curveObject, bool validatePoint=true) {
             int baseLen = curveObject.length();
 
             if (str.Length != 2 * baseLen) {
@@ -156,6 +174,20 @@ namespace EllipticCurve {
                 );
             }
             return publicKey;
+        }
+
+        public static PublicKey fromCompressed(string compressedString, CurveFp curve = null) {
+            if (curve == null) {
+                curve = Curves.secp256k1;
+            }
+            string parityTag = compressedString.Substring(0, 2);
+            string xHex = compressedString.Substring(2);
+            if (parityTag != _evenTag && parityTag != _oddTag) {
+                throw new ArgumentException("Compressed string should start with 02 or 03");
+            }
+            BigInteger x = Utils.BinaryAscii.numberFromHex(xHex);
+            BigInteger yVal = curve.y(x, parityTag == _evenTag);
+            return new PublicKey(new Point(x, yVal), curve);
         }
     }
 }
